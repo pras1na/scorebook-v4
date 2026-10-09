@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v3.9</title>
+    <title>Digital Scorebook v4.0</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -33,6 +33,8 @@
         .nav-tabs { display: flex; justify-content: center; flex: 1; }
         .navbar button.tab-btn { background: none; border: none; color: var(--text-muted); font-family: var(--font-display); font-size: 1em; font-weight: 700; text-transform: uppercase; padding: 11px 20px; cursor: pointer; position: relative; transition: color 0.2s; }
         .go-live-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); font-family: var(--font-display); font-size: 0.85em; font-weight: 700; text-transform: uppercase; padding: 8px 14px; border-radius: var(--radius); cursor: pointer; margin-right: 8px; transition: 0.15s; }
+        .broadcast-badge { font-family: var(--font-display); font-size: 0.78em; font-weight: 700; text-transform: uppercase; padding: 7px 12px; margin-right: 8px; border-radius: var(--radius); border: 1px solid var(--accent, #0099ff); color: var(--accent, #0099ff); background: rgba(0,153,255,0.12); white-space: nowrap; }
+        .broadcast-badge.fail { border-color: #f6ad55; color: #f6ad55; background: rgba(246,173,85,0.14); }
         .go-live-btn.is-live { background: rgba(255,68,85,0.12); border-color: var(--danger); color: var(--danger); animation: liveBlink 1.6s ease-in-out infinite; }
         @keyframes liveBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
         .corrections-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 1em; padding: 7px 11px; border-radius: var(--radius); cursor: pointer; margin-right: 8px; opacity: 0.7; }
@@ -509,6 +511,7 @@
             <button id="tabLog" class="tab-btn">Log</button>
             <button id="tabScorecard" class="tab-btn">Scorecard</button>
         </div>
+        <span id="broadcastBadge" class="broadcast-badge hidden" title="The overlay feed is being published for OBS / YouTube">📺 Overlay feed on</span>
         <button id="btnGoLive" class="go-live-btn">📡 Go Live</button>
         <button id="btnOpenCorrections" class="corrections-btn" title="Fix a name, misattributed deliveries, or a dismissal">🛠</button>
         <button id="themeToggle" class="theme-toggle" aria-label="Toggle light/dark theme">☀️</button>
@@ -529,6 +532,10 @@
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableFreeHit">
                 <input type="checkbox" id="enableFreeHit" checked>
                 <div style="flex:1;"><span class="t-text">Enable Free Hit Rule</span></div>
+            </label>
+            <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableBroadcast" title="Feeds the Broadcast Overlay (for YouTube / OBS). Leave off for normal matches.">
+                <input type="checkbox" id="enableBroadcast">
+                <div style="flex:1;"><span class="t-text">Broadcast Overlay Feed</span></div>
             </label>
         </div>
         <div class="setup-grid">
@@ -751,7 +758,7 @@
 let matchHistory = [];
 let scorecardInningsView = 1; // which innings the Scorecard tab is currently showing
 let match = {
-    wagonEnabled: true, enforceLimits: true, enableFreeHit: true, maxOversPerBowler: 4, maxWickets: 10,
+    wagonEnabled: true, enforceLimits: true, enableFreeHit: true, broadcastEnabled: false, maxOversPerBowler: 4, maxWickets: 10,
     queue: { newBatter: false, newBowler: false, overSummaryPending: false, ignoreInningsPrompt: false, ignoreMatchPrompt: false },
     pendingOverSummary: null,
     isLive: false, liveShareId: null, liveSharePin: null,
@@ -884,6 +891,8 @@ function startMatch() {
     match.wagonEnabled = wagonEnabled;
     match.enforceLimits = enforceLimits;
     match.enableFreeHit = enableFreeHit;
+    match.broadcastEnabled = $('enableBroadcast').checked;
+    try { localStorage.removeItem(BROADCAST_KEY); } catch (e) {}
     match.freeHit = false;
     match.dateString = new Date().toLocaleDateString();
     match.tossStr = `${winnerName} won the toss, elected to ${tossDecision.toLowerCase()}`;
@@ -938,6 +947,69 @@ function switchTab(screenId, btnId) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  BROADCAST FEED (optional — only runs when ticked at setup)
+// ═══════════════════════════════════════════════════════════
+const BROADCAST_KEY = 'scorebook_broadcast_snapshot';
+let broadcastChannel = null;
+try { broadcastChannel = new BroadcastChannel('scorebook_broadcast'); } catch (e) { /* not available */ }
+
+// Turns a raw scorebook `match` object into the overlay snapshot (schema 1).
+// Pure function: no DOM, no globals. Used by the scorebook (same-laptop mode)
+// and by the overlay itself (Go Live relay mode).
+function snapshotFromMatch(m) {
+    const team = k => (m.teams && m.teams[k]) || { name: '', players: [] };
+    const bat = team(m.battingTeam), fld = team(m.fieldingTeam);
+    const act = m.active || {};
+    const log = Array.isArray(m.log) ? m.log : [];
+    const complete = !!m.matchCompleteTriggered || log.some(l => l && l.desc === 'END OF MATCH');
+    const atBreak = m.innings === 2 && m.totalLegalBalls === 0 && act.strikerIdx == null && !complete;
+    const status = complete ? 'complete' : (atBreak ? 'innings_break' : 'live');
+
+    const batter = idx => {
+        const p = idx == null ? null : bat.players[idx];
+        return (p && !p.isOut) ? { name: p.name, runs: p.runs || 0, balls: p.balls || 0 } : null;
+    };
+    const bp = act.bowlerIdx == null ? null : fld.players[act.bowlerIdx];
+    const fi = m.firstInnings ? {
+        team: team(m.firstInnings.team).name, runs: m.firstInnings.runs,
+        wickets: m.firstInnings.wickets, balls: m.firstInnings.balls
+    } : null;
+
+    let resultText = null;
+    if (complete && fi) {
+        const maxW = m.maxWickets !== undefined ? m.maxWickets : 10;
+        if (m.runs > fi.runs) { const n = maxW - m.wickets; resultText = bat.name + ' won by ' + n + (n === 1 ? ' wicket' : ' wickets'); }
+        else if (fi.runs > m.runs) { const n = fi.runs - m.runs; resultText = fi.team + ' won by ' + n + (n === 1 ? ' run' : ' runs'); }
+        else resultText = 'Match tied';
+    }
+    return {
+        schema: 1, updatedAt: Date.now(), status,
+        innings: m.innings === 2 ? 2 : 1,
+        maxOvers: m.targetOvers || 20,
+        battingTeam: bat.name, fieldingTeam: fld.name,
+        runs: m.runs || 0, wickets: m.wickets || 0, balls: m.totalLegalBalls || 0,
+        target: m.target == null ? null : m.target,
+        striker: batter(act.strikerIdx), nonStriker: batter(act.nonStrikerIdx),
+        bowler: bp ? { name: bp.name, wickets: bp.bowlWickets || 0, runs: bp.bowlRuns || 0, balls: bp.bowlBalls || 0 } : null,
+        thisOver: (m.currentOverString || []).map(o => String(o && typeof o === 'object' ? o.sym : o)),
+        freeHit: !!(m.enableFreeHit && m.freeHit),
+        firstInnings: fi, resultText
+    };
+}
+
+
+function publishBroadcast() {
+    if (!match.broadcastEnabled) return;
+    try {
+        const snap = snapshotFromMatch(match);
+        const json = JSON.stringify(snap);
+        localStorage.setItem(BROADCAST_KEY, json);
+        if (broadcastChannel) broadcastChannel.postMessage(json);
+        updateBroadcastBadge(false);
+    } catch (e) { console.error('Broadcast publish failed:', e); updateBroadcastBadge(true); }
+}
+
+// ═══════════════════════════════════════════════════════════
 //  AUTO BACKUP & CLOUD SYNC ENGINE
 // ═══════════════════════════════════════════════════════════
 const CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbzgSi6PDk9TGx7uExn2aynoqOX7Don-GxJi5ud4cfkI-IvKc3GDxQTL-reuxWyMjUw/exec";
@@ -947,6 +1019,7 @@ function syncToCloud() {
     // prompt on load find anything — it was previously never written.
     try { localStorage.setItem('live_match_backup', JSON.stringify(match)); }
     catch (e) { console.error('Local autosave failed:', e); }
+    publishBroadcast();
 
     // Cloud sync only happens once the scorer has explicitly chosen to
     // Go Live — otherwise every match would broadcast by default, which
@@ -989,7 +1062,16 @@ function generatePin() {
     return String(Math.floor(1000 + Math.random() * 9000));
 }
 
+function updateBroadcastBadge(failed) {
+    const el = $('broadcastBadge');
+    if (!el) return;
+    el.classList.toggle('hidden', !match.broadcastEnabled);
+    el.classList.toggle('fail', !!failed);
+    el.textContent = failed ? '⚠️ Overlay feed problem' : '📺 Overlay feed on';
+}
+
 function updateGoLiveButton() {
+    updateBroadcastBadge(false);
     const btn = $('btnGoLive');
     if (!btn) return;
     if (match.isLive) {
@@ -1557,7 +1639,7 @@ function triggerNextActionQueue() {
 }
 
 function promptEndInnings() {
-    $('inningsModalMsg').textContent = `${match.teams[match.battingTeam].name} scored${match.runs}/${match.wickets} in${fmtOv(match.totalLegalBalls)} overs.`;
+    $('inningsModalMsg').textContent = `${match.teams[match.battingTeam].name} scored ${match.runs}/${match.wickets} in ${fmtOv(match.totalLegalBalls)} overs.`;
     $('inningsModal').classList.remove('hidden');
 }
 
@@ -1579,8 +1661,8 @@ function triggerMatchEnd() {
     const n1 = match.teams[t1.team].name; const n2 = match.teams[match.battingTeam].name;
     const maxWic = match.maxWickets !== undefined ? match.maxWickets : 10;
     let res;
-    if (match.runs > t1.runs) res = `${n2} won by${maxWic - match.wickets} wicket(s)`;
-    else if (t1.runs > match.runs) res = `${n1} won by${t1.runs - match.runs} run(s)`;
+    if (match.runs > t1.runs) res = `${n2} won by ${maxWic - match.wickets} wicket(s)`;
+    else if (t1.runs > match.runs) res = `${n1} won by ${t1.runs - match.runs} run(s)`;
     else res = 'Match Tied! 🤝';
     $('summaryResultText').textContent = res;
     $('matchSummaryModal').classList.remove('hidden');
@@ -1876,7 +1958,7 @@ function confirmExtra() {
         match.runs += v1; match.totalLegalBalls++; match.partnership.runs += v1; match.partnership.balls++;
         s.balls++; b.bowlBalls++; match.currentOverTracker.balls++;
         const struct = { bowler: b.name, batter: s.name, runsOffBat: 0, extras: { type: pendingExtraType, amount: v1 }, isWicket: false };
-        logEvent(`${b.name} to${s.name} : ${v1}${pendingExtraType}`, null, null, struct);
+        logEvent(`${b.name} to ${s.name} : ${v1}${pendingExtraType}`, null, null, struct);
         pushOverSymbol(v1 + (pendingExtraType === 'Bye' ? 'b' : 'lb'), null);
         if (v1 % 2 !== 0) swapBatters();
         consumeOrExtendFreeHit(false, true);
@@ -1896,7 +1978,7 @@ function confirmExtra() {
         
         let wPayload = match.wagonEnabled ? { mapStatus: v1 === 0 ? 'unmapped' : 'pending', batterIdx: match.active.strikerIdx, runs: v1, isWicket: false, wicketType: null, trajectory: v1 === 6 ? 'air' : 'ground', lockedTraj: v1 === 6 } : null;
         const struct = { bowler: b.name, batter: s.name, runsOffBat: v1, extras: { type: 'No Ball', amount: 1 + v2, byes: v2 }, isWicket: false };
-        logEvent(`${b.name} to${s.name} : NB +${v1} bat +${v2} bye`, match.totalLegalBalls + 1, wPayload, struct);
+        logEvent(`${b.name} to ${s.name} : NB +${v1} bat +${v2} bye`, match.totalLegalBalls + 1, wPayload, struct);
         pushOverSymbol(total + 'nb', wPayload);
         if ((v1 + v2) % 2 !== 0) swapBatters();
         consumeOrExtendFreeHit(true, false); 
@@ -1957,7 +2039,7 @@ function confirmWicket() {
         match.wickets++; outP.isOut = true; outP.dismissalInfo = `Run Out (${fd})`;
     } else {
         match.wickets++; match.totalLegalBalls++; match.partnership.balls++; b.bowlBalls++; match.currentOverTracker.balls++; match.currentOverTracker.wickets++; match.teams[match.battingTeam].players[match.active.strikerIdx].balls++; outP.isOut = true;
-        if (type === 'Caught') { outP.dismissalInfo = `c ${fd} b${b.name}`; b.bowlWickets++; } else if (type === 'Stumped') { outP.dismissalInfo = `st ${fd} b${b.name}`; b.bowlWickets++; } else { outP.dismissalInfo = `${type === 'Bowled' ? 'b' : type}${b.name}`; b.bowlWickets++; }
+        if (type === 'Caught') { outP.dismissalInfo = `c ${fd} b ${b.name}`; b.bowlWickets++; } else if (type === 'Stumped') { outP.dismissalInfo = `st ${fd} b ${b.name}`; b.bowlWickets++; } else { outP.dismissalInfo = `${type === 'Bowled' ? 'b' : type} ${b.name}`; b.bowlWickets++; }
         consumeOrExtendFreeHit(false, true);
     }
 
@@ -2002,6 +2084,7 @@ function checkOverComplete(isWicket = false, force = false) {
         const overWides = match.currentOverTracker.wides;
         const overNoBalls = match.currentOverTracker.noBalls;
         const overBallsSnapshot = match.currentOverString.slice();
+        publishBroadcast(); // capture the 6th ball before the tracker clears
 
         match.log.push({
             type: 'summary',
@@ -2101,7 +2184,8 @@ function endInnings() {
     wagonViewMode = 'team'; wagonSelectedPlayerIdx = '__all__';
     renderOverTracker(); updateDashboard(); renderLog();
     if (match.wagonEnabled) { drawWagonCanvas(); updateWagonQueueUI(); }
-    openConfirmModal('Innings Complete', `${match.teams[match.battingTeam].name} need${match.target} to win.`, 'Select Striker', false, () => {
+    publishBroadcast();
+    openConfirmModal('Innings Complete', `${match.teams[match.battingTeam].name} needs ${match.target} to win.`, 'Select Striker', false, () => {
         openSelectionModal('striker');
     });
 }
@@ -2556,6 +2640,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (typeof match.freeHit !== 'boolean') match.freeHit = false;
                 if (typeof match.enableFreeHit !== 'boolean') match.enableFreeHit = true;
                 if (match.maxWickets === undefined) match.maxWickets = 10;
+                if (typeof match.broadcastEnabled !== 'boolean') match.broadcastEnabled = false;
                 scorecardInningsView = match.innings === 2 ? 2 : 1;
                 
                 $('setupScreen').classList.add('hidden'); $('navBar').classList.remove('hidden');$('mainAppWrapper').classList.remove('hidden');
@@ -2568,10 +2653,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 updateDashboard(); renderOverTracker(); renderLog(); updateControlStates();
                 if (match.wagonEnabled) { drawWagonCanvas(); updateWagonQueueUI(); }
                 updateGoLiveButton();
+                publishBroadcast();
                 if (match.active.strikerIdx === null) openSelectionModal('striker'); else if (match.active.nonStrikerIdx === null) openSelectionModal('nonStriker'); else if (match.active.bowlerIdx === null) openSelectionModal('bowler');
                 showToast('Match resumed — undo history starts fresh');
             } catch (e) { localStorage.removeItem('live_match_backup'); }
-        }, () => { localStorage.removeItem('live_match_backup'); });
+        }, () => { localStorage.removeItem('live_match_backup'); try { localStorage.removeItem(BROADCAST_KEY); } catch (e) {} });
     }
     if (localStorage.getItem('live_match_theme') === 'light') { document.body.classList.add('light-mode'); appTheme = 'light'; $('themeToggle').textContent = '🌙'; }
     generateNameInputs(); wireUpEvents();
@@ -2647,7 +2733,7 @@ function wireUpEvents() {
     });
 
     $('btnPrintSummary').addEventListener('click', () => { $('matchSummaryModal').classList.add('hidden'); switchTab('scorecardScreen', 'tabScorecard');$('btnOpenPrintMenu').click(); });
-    $('btnDownloadSummary').addEventListener('click', () => { triggerAutoDownload('ManualBackup'); });$('btnResetSummary').addEventListener('click', () => { openConfirmModal('Wipe Data', 'Did you save your JSON or PDF? This will wipe the match entirely.', 'Yes, Wipe Data', true, () => { localStorage.removeItem('live_match_backup'); location.reload(); }); });
+    $('btnDownloadSummary').addEventListener('click', () => { triggerAutoDownload('ManualBackup'); });$('btnResetSummary').addEventListener('click', () => { openConfirmModal('Wipe Data', 'Did you save your JSON or PDF? This will wipe the match entirely.', 'Yes, Wipe Data', true, () => { localStorage.removeItem('live_match_backup'); try { localStorage.removeItem(BROADCAST_KEY); } catch (e) {} location.reload(); }); });
     $('btnDownloadBackup').addEventListener('click', () =>$('btnDownloadSummary').click());
 
     $('wBtnTeam').addEventListener('click', () => setWagonView('team'));$('wBtnPlayer').addEventListener('click', () => setWagonView('player')); $('wPlayerSelect').addEventListener('change', e => { wagonSelectedPlayerIdx = e.target.value; drawWagonCanvas(); updateWagonStats(); });$('trajGround').addEventListener('click', () => { currentTraj = 'ground'; updateWagonQueueUI(); }); $('trajAir').addEventListener('click', () => { currentTraj = 'air'; updateWagonQueueUI(); });$('btnExportWagon').addEventListener('click', exportWagonPDF);
