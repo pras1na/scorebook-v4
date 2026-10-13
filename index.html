@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v4.0</title>
+    <title>Digital Scorebook v4.1</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -170,6 +170,8 @@
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
+        /* Confirmations (e.g. Wipe Data) are opened from inside other modals such as Match Complete, so they must sit above them. */
+        #confirmModal { z-index: 1200; }
         .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 24px; width: 100%; max-width: 400px; transition: border-color 0.2s; }
         .modal-title { font-family: var(--font-display); font-size: 1.4em; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
         .modal-label { font-family: var(--font-display); font-size: 0.8em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; display: block; }
@@ -203,6 +205,22 @@
         .innings-context { display: block; font-size: 0.65em; font-weight: 600; text-transform: none; color: var(--text-muted); letter-spacing: 0; margin-top: 2px; }
         .sc-innings-tab-btn { flex: 1; max-width: 200px; padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); font-family: var(--font-display); font-size: 0.95em; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: 0.15s; }
         .sc-innings-tab-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,229,176,0.1); }
+        .fow-line { font-family: var(--font-display); font-size: 0.85em; color: var(--text-muted); padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-top: none; border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); margin-bottom: 16px; text-align: left; line-height: 1.5; }
+        .fow-line b { font-weight: 700; color: var(--text); text-transform: uppercase; }
+        .pship-table td:nth-child(2) { text-align: left; }
+        .pship-table .not-out { color: var(--accent); font-size: 0.85em; font-weight: 700; margin-left: 6px; }
+        .pship-table .ended-note { color: var(--text-dim); font-size: 0.85em; margin-left: 6px; }
+        .pship-note { font-size: 0.75em; color: var(--text-dim); margin: 2px 0 16px; text-align: left; }
+
+        .graph-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+        .graph-title { font-family: var(--font-display); font-size: 0.8em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+        #wormCanvas { display: block; width: 100%; }
+        .worm-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; font-family: var(--font-display); font-size: 1em; font-weight: 600; color: var(--text); }
+        .worm-legend .lg { display: inline-flex; align-items: center; gap: 8px; }
+        .worm-legend .sw { width: 26px; height: 4px; border-radius: 2px; }
+        .worm-legend .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--danger); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--danger); }
+        .worm-legend .dash { width: 26px; height: 0; border-top: 2px dashed var(--text-muted); }
+
         .sc-hide-live { display: none; }
         @media print { .sc-hide-live { display: block !important; } }
 
@@ -221,7 +239,7 @@
             .navbar, .control-section, .wagon-col, .modal-overlay, .over-tracker, #btnDownloadBackup { display: none !important; }
             .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .app-layout { display: block !important; }
-            #dashboardScreen, #logScreen, #setupScreen { display: none !important; }
+            #dashboardScreen, #logScreen, #graphsScreen, #setupScreen { display: none !important; }
             #scorecardScreen { display: block !important; }
             table, th, td { border: 1px solid #000; color: #000 !important; }
             th { background: #eee !important; color: #000 !important; }
@@ -510,6 +528,7 @@
             <button id="tabDashboard" class="tab-btn active">Dashboard</button>
             <button id="tabLog" class="tab-btn">Log</button>
             <button id="tabScorecard" class="tab-btn">Scorecard</button>
+            <button id="tabGraphs" class="tab-btn">Graphs</button>
         </div>
         <span id="broadcastBadge" class="broadcast-badge hidden" title="The overlay feed is being published for OBS / YouTube">📺 Overlay feed on</span>
         <button id="btnGoLive" class="go-live-btn">📡 Go Live</button>
@@ -519,7 +538,7 @@
 
     <!-- SETUP SCREEN -->
     <div id="setupScreen" class="container">
-        <div class="setup-logo"><h1>🏏 Scorebook V3.1</h1></div>
+        <div class="setup-logo"><h1>🏏 Scorebook V4.1</h1></div>
         <div style="display:flex; gap:14px; margin-bottom:24px; flex-wrap:wrap;">
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableWagon">
                 <input type="checkbox" id="enableWagon" checked>
@@ -720,6 +739,16 @@
                     </div>
 
                     <button id="btnDownloadBackup" class="btn-primary" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); margin-top:20px;">💾 Download JSON Backup</button>
+                </div>
+
+                <!-- GRAPHS -->
+                <div id="graphsScreen" class="hidden">
+                    <h2 style="font-family:var(--font-display); text-transform:uppercase; margin-bottom:12px;">Graphs</h2>
+                    <div class="graph-card">
+                        <div class="graph-title">Score Worm — runs by overs</div>
+                        <canvas id="wormCanvas" role="img" aria-label="Score worm: cumulative runs by overs"></canvas>
+                        <div id="wormLegend" class="worm-legend"></div>
+                    </div>
                 </div>
             </div>
 
@@ -939,11 +968,12 @@ function consumeOrExtendFreeHit(isNoBall, isLegalDelivery) {
 }
 
 function switchTab(screenId, btnId) {
-    ['dashboardScreen', 'logScreen', 'scorecardScreen'].forEach(id => $(id).classList.add('hidden'));
-    ['tabDashboard', 'tabLog', 'tabScorecard'].forEach(id => $(id).classList.remove('active'));
+    ['dashboardScreen', 'logScreen', 'scorecardScreen', 'graphsScreen'].forEach(id => $(id).classList.add('hidden'));
+    ['tabDashboard', 'tabLog', 'tabScorecard', 'tabGraphs'].forEach(id => $(id).classList.remove('active'));
     $(screenId).classList.remove('hidden');
     $(btnId).classList.add('active');
     if (screenId === 'scorecardScreen') renderScorecard();
+    if (screenId === 'graphsScreen') renderScoreWorm();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1616,7 +1646,9 @@ function triggerNextActionQueue() {
     // Pending wagon shots get mapped first — before the over recap, and
     // before offering the next bowler — so the shot map for the over is
     // already complete by the time it's being reviewed/reconciled.
-    if (match.wagonEnabled && match.log.some(x => x.wagon && x.wagon.mapStatus === 'pending')) return;
+    // Only the current innings counts: the wagon can't offer an earlier
+    // innings' shots for placement, so they'd block the queue for good.
+    if (match.wagonEnabled && match.log.some(x => x.wagon && x.wagon.mapStatus === 'pending' && (x.innings || 1) === match.innings)) return;
 
     // Always-on checkpoint: recap the over just completed before offering
     // anything else, so it can be reconciled before moving on.
@@ -1645,7 +1677,20 @@ function promptEndInnings() {
 
 function promptEndMatch() { $('matchEndModal').classList.remove('hidden'); }
 
+// Shots still waiting for a field position when the innings or match ends
+// can't be placed afterwards, so they're marked unmapped (no position, like
+// a dot ball) instead of being left pending.
+function autoSkipPendingShots() {
+    const pending = match.log.filter(l => l.wagon && l.wagon.mapStatus === 'pending' && (l.innings || 1) === match.innings);
+    if (!pending.length) return;
+    pending.forEach(l => { l.wagon.mapStatus = 'unmapped'; });
+    activeWagonBallId = null;
+    if (match.wagonEnabled) { drawWagonCanvas(); updateWagonQueueUI(); }
+    showToast(`${pending.length} unplaced shot${pending.length === 1 ? '' : 's'} skipped`);
+}
+
 function triggerMatchEnd() {
+    autoSkipPendingShots();
     const now = Date.now();
     if (match.active.strikerIdx !== null) {
         let s = match.teams[match.battingTeam].players[match.active.strikerIdx];
@@ -2156,6 +2201,7 @@ function forceEndOver() {
 
 function endInnings() {
     if (match.innings !== 1) return;
+    autoSkipPendingShots();
 
     // Close out the active batters' times
     const now = Date.now();
@@ -2253,6 +2299,7 @@ function updateDashboard() {
         $('bowlerName').textContent = "Bowler"; $('bowlerStats').innerHTML = `0-0 <span style="font-size:0.6em;color:var(--text-muted);">(0.0)</span>`; $('bowlerExtraStats').innerHTML = '';
     }
     renderScorecard();
+    if (!$('graphsScreen').classList.contains('hidden')) renderScoreWorm();
 }
 
 function renderOverTracker() {
@@ -2294,31 +2341,159 @@ function renderLog() {
     }).join('');
 }
 
+// ═══════════════════════════════════════════════════════════
+//  INNINGS ANALYSIS — Fall of Wickets, Partnerships, Score Worm
+//  Derived from match.log alone (no stored state), so it works on
+//  resumed matches and on JSON files from earlier versions too.
+// ═══════════════════════════════════════════════════════════
+
+// An entry's innings: its own `innings` tag, or for entries logged before
+// tagging existed, which side of the END OF INNINGS marker it sits on (the
+// same split the scorecard's Fall of Wickets has always used).
+function logInningsResolver(log) {
+    const endIdx = log.findIndex(e => e && e.type === 'summary' && typeof e.desc === 'string' && e.desc.startsWith('END OF INNINGS'));
+    return (entry, i) => (entry.innings === 1 || entry.innings === 2) ? entry.innings : (endIdx !== -1 && i > endIdx ? 2 : 1);
+}
+
+function isDeliveryEntry(l) {
+    if (!l || l.type === 'summary' || l.type === 'retirement') return false;
+    return !(typeof l.desc === 'string' && (l.desc.startsWith('END') || l.desc.startsWith('End of')));
+}
+
+function isWicketEntry(l) { return l.type !== 'retirement' && (l.isWicket === true || l.type === 'wicket'); }
+
+function extrasTypeOf(l) {
+    if (l.extras && l.extras.type) return l.extras.type;
+    const d = l.desc || ''; // older entries only have the description
+    if (/\bWide\b/.test(d)) return 'Wide';
+    if (/\bNB\b/.test(d)) return 'No Ball';
+    return null;
+}
+
+// Wides and no-balls add runs but aren't balls.
+function isLegalDelivery(l) { const t = extrasTypeOf(l); return t !== 'Wide' && t !== 'No Ball'; }
+
+// Runs an entry added — only needed for old entries that have no teamRuns.
+function entryRunsFallback(l) {
+    if (l.runsOffBat !== undefined) return (l.runsOffBat || 0) + (l.extras && l.extras.amount ? l.extras.amount : 0);
+    const d = l.desc || '';
+    if (d.includes('WICKET')) return 0;
+    const nb = d.match(/NB \+(\d+) bat(?: \+(\d+) bye)?/);
+    if (nb) return 1 + parseInt(nb[1]) + (nb[2] ? parseInt(nb[2]) : 0);
+    const m = d.match(/: ?\+?(\d+)/);
+    return m ? parseInt(m[1]) : 0;
+}
+
+function batterOfEntry(l) {
+    if (l.batter) return l.batter;
+    const d = l.desc || ''; const t = d.indexOf(' to '), c = d.indexOf(' :');
+    return t !== -1 && c > t ? d.slice(t + 4, c).trim() : '';
+}
+
+// The dismissed player — for a non-striker run out that's not the striker.
+function outPlayerOfEntry(l) {
+    if (l.wicket && l.wicket.outPlayer) return l.wicket.outPlayer;
+    const m = (l.desc || '').match(/^WICKET! (.+?) —/);
+    return m ? m[1].trim() : batterOfEntry(l);
+}
+
+function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+// Walks one innings of the log and returns its fall of wickets, partnerships
+// and worm points. Returns null if that innings hasn't started.
+function analyseInnings(m, n) {
+    const log = Array.isArray(m.log) ? m.log : [];
+    const batKey = n === 1 ? (m.firstInnings ? m.firstInnings.team : m.battingTeam) : (m.firstInnings ? m.battingTeam : null);
+    if (!batKey || !m.teams || !m.teams[batKey]) return null;
+    const batPlayers = m.teams[batKey].players || [];
+    const matchOver = !!m.matchCompleteTriggered || log.some(l => l && l.type === 'summary' && l.desc === 'END OF MATCH');
+    const inProgress = n === 1 ? !m.firstInnings && !matchOver : !matchOver;
+    const resolve = logInningsResolver(log);
+
+    let runs = 0, balls = 0, wkts = 0;
+    const fow = [], points = [{ balls: 0, runs: 0 }], wicketPoints = [], segs = [];
+    const newSeg = () => ({ startRuns: runs, startBalls: balls, wktNo: wkts + 1, names: [], deliveries: 0, end: null });
+    let seg = newSeg();
+    const retired = new Set();
+    const note = nm => { if (nm && !seg.names.includes(nm)) seg.names.push(nm); };
+    const close = end => { seg.end = end; seg.endRuns = runs; seg.endBalls = balls; segs.push(seg); seg = newSeg(); };
+
+    log.forEach((l, i) => {
+        if (!l || resolve(l, i) !== n) return;
+        const isRet = l.type === 'retirement';
+        if (!isRet && !isDeliveryEntry(l)) return;
+        if (isRet) {
+            const who = outPlayerOfEntry(l);
+            // The same retirement logged twice in a row mustn't split off an empty partnership.
+            if (seg.deliveries === 0 && retired.has(who)) return;
+            if (typeof l.teamRuns === 'number') runs = l.teamRuns;
+            if (typeof l.teamWickets === 'number') wkts = l.teamWickets; else if (l.isWicket) wkts++;
+            retired.add(who); note(who);
+            close({ kind: 'retired', out: who, reason: (l.wicket && l.wicket.type) || 'Retired' });
+            return;
+        }
+        runs = typeof l.teamRuns === 'number' ? l.teamRuns : runs + entryRunsFallback(l);
+        if (isLegalDelivery(l)) balls++;
+        seg.deliveries++;
+        note(batterOfEntry(l));
+        points.push({ balls, runs });
+        if (isWicketEntry(l)) {
+            wkts = typeof l.teamWickets === 'number' ? l.teamWickets : wkts + 1;
+            const out = outPlayerOfEntry(l);
+            note(out);
+            fow.push({ wkt: wkts, runs, name: out, over: l.over });
+            wicketPoints.push({ balls, runs });
+            close({ kind: 'wicket', out });
+        }
+    });
+    if (inProgress || seg.deliveries > 0) { seg.endRuns = runs; seg.endBalls = balls; segs.push(seg); }
+
+    // Name each pair: whoever survived the last break, then everyone seen
+    // batting in this stretch; a partner who never faced (or the live pair)
+    // is filled from the active batters or the batting order.
+    const order = batPlayers.filter(p => p.hasBatted || p.isOut).sort((a, b) => (a.timeIn || 0) - (b.timeIn || 0)).map(p => p.name);
+    const used = new Set();
+    let survivor = null;
+    const partnerships = segs.map(s => {
+        const pair = [];
+        const add = nm => { if (nm && !pair.includes(nm) && pair.length < 2) pair.push(nm); };
+        if (!s.end && inProgress && m.active) [m.active.strikerIdx, m.active.nonStrikerIdx].forEach(ix => { if (ix != null && batPlayers[ix]) add(batPlayers[ix].name); });
+        add(survivor);
+        s.names.forEach(add);
+        while (pair.length < 2) {
+            const next = order.find(nm => !used.has(nm) && !pair.includes(nm) && !retired.has(nm));
+            if (!next) break;
+            add(next);
+        }
+        pair.forEach(nm => used.add(nm));
+        survivor = s.end ? (pair.find(nm => nm !== s.end.out) || null) : null;
+        return { wktNo: s.wktNo, batters: pair, runs: s.endRuns - s.startRuns, balls: s.endBalls - s.startBalls, unbroken: !s.end, end: s.end };
+    });
+
+    return { batKey, fow, partnerships, points, wicketPoints, runs, balls, wickets: wkts, inProgress };
+}
+
+function fowLineHtml(a) {
+    if (!a || !a.fow.length) return '';
+    const items = a.fow.map(f => `${f.wkt}-${f.runs} (${escHtml(f.name)}, ${escHtml(f.over)} ov)`).join(', ');
+    return `<div class="fow-line"><b>Fall of Wickets:</b> ${items}</div>`;
+}
+
+function partnershipsHtml(a) {
+    if (!a || !a.partnerships.length) return '';
+    const rows = a.partnerships.map(p => {
+        const names = p.batters.length ? p.batters.map(escHtml).join(' &amp; ') : '—';
+        const tag = p.unbroken ? `<span class="not-out">not out</span>`
+            : (p.end && p.end.kind === 'retired' ? `<span class="ended-note">(${escHtml(p.end.out)} ${escHtml(p.end.reason.toLowerCase())})</span>` : '');
+        return `<tr><td>${ordinal(p.wktNo)}</td><td style="font-weight:700;">${names}${tag}</td><td><b>${p.runs}${p.unbroken ? '*' : ''}</b></td><td>${p.balls}</td></tr>`;
+    }).join('');
+    return `<div class="innings-subheading">Partnerships</div><div class="table-wrapper" style="margin-bottom:0;"><table class="pship-table"><thead><tr><th>Wkt</th><th>Batters</th><th>Runs</th><th>Balls</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        + `<div class="pship-note">Partnership runs include extras scored while the pair were together.</div>`;
+}
+
 function renderScorecard() {
     $('scDateStr').textContent = match.dateString;
     $('scTossStr').textContent = match.tossStr;
-
-    const getFOWHtml = (isFirstInnings) => {
-        const endIdx = match.log.findIndex(e => e.type === 'summary' && typeof e.desc === 'string' && e.desc.startsWith('END OF INNINGS'));
-        let logSegment = isFirstInnings ? (endIdx === -1 ? match.log : match.log.slice(0, endIdx)) : (endIdx === -1 ? [] : match.log.slice(endIdx + 1));
-        let fowList = []; let calcRuns = 0; let calcWickets = 0;
-        logSegment.forEach(log => {
-            if (log.type === 'summary') return;
-            if (log.runsOffBat !== undefined) { calcRuns += log.runsOffBat; if (log.extras && log.extras.amount) calcRuns += log.extras.amount; } 
-            else if (log.desc) { const m = log.desc.match(/: \+?(\d+)/); if (m && !log.desc.includes('WICKET')) calcRuns += parseInt(m[1]); }
-            if (log.isWicket || log.type === 'wicket') {
-                calcWickets++;
-                const r = log.teamRuns !== undefined ? log.teamRuns : calcRuns;
-                const w = log.teamWickets !== undefined ? log.teamWickets : calcWickets;
-                let bName = 'Unknown';
-                if (log.wicket && log.wicket.outPlayer) bName = log.wicket.outPlayer;
-                else if (log.batter) bName = log.batter;
-                fowList.push(`${w}-${r} (${bName},${log.over} ov)`);
-            }
-        });
-        if (fowList.length === 0) return '';
-        return `<div style="font-family:var(--font-display); font-size:0.85em; color:var(--text-muted); padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-top:none; border-bottom-left-radius:var(--radius); border-bottom-right-radius:var(--radius); margin-bottom:16px; text-align:left; line-height:1.5;"><span style="font-weight:700; color:var(--text); text-transform:uppercase;">Fall of Wickets:</span> ${fowList.join(', ')}</div>`;
-    };
 
     const genTbl = (batTeamKey, bowlTeamKey, isFirstInnings) => {
         const bat = match.teams[batTeamKey]; const bowl = match.teams[bowlTeamKey];
@@ -2326,7 +2501,10 @@ function renderScorecard() {
         const dnbBatters = bat.players.filter(p => !p.hasBatted && !p.isOut);
         const activeBowlers = bowl.players.filter(p => p.bowlBalls > 0 || p.bowlRuns > 0).sort((a,b) => (a.bowlOrder||0) - (b.bowlOrder||0));
 
-        const fowHtml = getFOWHtml(isFirstInnings);
+        // A failure here must never break the scorecard (or a resume, which renders it).
+        let ana = null;
+        try { ana = analyseInnings(match, isFirstInnings ? 1 : 2); } catch (e) { console.error('Innings analysis failed:', e); }
+        const fowHtml = fowLineHtml(ana);
         const tblRadiusStyle = fowHtml ? `border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0;` : ``;
 
         let h = `<div class="innings-subheading">Batting</div><div class="table-wrapper" style="${tblRadiusStyle}"><table><thead><tr><th>Batter</th><th>Status</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>Mins</th><th>SR</th></tr></thead><tbody>`;
@@ -2338,6 +2516,7 @@ function renderScorecard() {
         });
         h += `</tbody></table></div>`;
         h += fowHtml;
+        h += partnershipsHtml(ana);
 
         h += `<div class="innings-subheading bowl">Bowling</div><div class="table-wrapper"><table><thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Wd</th><th>NB</th><th>Eco</th></tr></thead><tbody>`;
         activeBowlers.forEach(p => { h += `<tr><td style="font-weight:700;">${p.name}</td><td>${fmtOv(p.bowlBalls)}</td><td>${p.bowlMaidens}</td><td>${p.bowlRuns}</td><td><b>${p.bowlWickets}</b></td><td>${p.bowlWides}</td><td>${p.bowlNoBalls}</td><td>${calcEco(p.bowlRuns,p.bowlBalls)}</td></tr>`; });
@@ -2384,6 +2563,115 @@ function applyScorecardInningsVisibility() {
     });
     $('scTabInnings1').classList.toggle('active', scorecardInningsView === 1);
     $('scTabInnings2').classList.toggle('active', scorecardInningsView === 2);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCORE WORM (Graphs tab)
+// ═══════════════════════════════════════════════════════════
+function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1e-9))));
+    const f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+
+function renderScoreWorm() {
+    const canvas = $('wormCanvas');
+    if (!canvas || !match || !match.teams) return;
+    let inn1 = null, inn2 = null;
+    try {
+        inn1 = analyseInnings(match, 1);
+        inn2 = match.firstInnings ? analyseInnings(match, 2) : null;
+    } catch (e) { console.error('Score worm analysis failed:', e); return; }
+    const series = [inn1, inn2].filter(Boolean);
+
+    const css = getComputedStyle(document.body);
+    const cv = (name, fb) => (css.getPropertyValue(name) || '').trim() || fb;
+    const col = {
+        lines: [cv('--accent2', '#0099ff'), cv('--warn', '#ffb300')],
+        wicket: cv('--danger', '#ff4455'), surface: cv('--surface', '#111820'),
+        grid: cv('--border', '#1e2e3d'), label: cv('--text-muted', '#5a7a99'), text: cv('--text', '#e8f0f8'),
+        font: cv('--font-display', 'sans-serif')
+    };
+
+    // Legend (HTML, so it uses the app's own text styles)
+    const legend = $('wormLegend');
+    if (legend) {
+        legend.innerHTML = series.map((s, i) => `<span class="lg"><span class="sw" style="background:${col.lines[i]}"></span>${escHtml(match.teams[s.batKey].name)}${i === 1 ? ' (2nd inns)' : ' (1st inns)'}</span>`).join('')
+            + (series.some(s => s.wicketPoints.length) ? `<span class="lg"><span class="dot"></span>Wicket</span>` : '')
+            + (inn2 && match.target ? `<span class="lg"><span class="dash"></span>Target ${match.target}</span>` : '');
+    }
+
+    // Size at device pixel ratio for a sharp line on high-density screens.
+    const cssW = canvas.clientWidth || (canvas.parentElement && canvas.parentElement.clientWidth) || 0;
+    if (!cssW) return;
+    const cssH = Math.max(300, Math.min(640, Math.round(cssW * 0.55)));
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const fs = cssW >= 900 ? 16 : 14;
+    const pad = { l: fs * 3.4, r: fs * 3.6, t: fs * 1.2, b: fs * 3 };
+    const plotW = cssW - pad.l - pad.r, plotH = cssH - pad.t - pad.b;
+
+    const maxBalls = Math.max((match.targetOvers || 0) * 6, ...series.map(s => s.balls), 6);
+    const maxOvers = Math.ceil(maxBalls / 6);
+    const topRuns = Math.max(10, ...series.map(s => s.runs), inn2 && match.target ? match.target : 0);
+    const yStep = niceStep(topRuns / 6);
+    const yMax = Math.ceil((topRuns * 1.05) / yStep) * yStep;
+    const xStep = [1, 2, 5, 10, 20, 50].find(s => maxOvers / s <= (cssW >= 900 ? 12 : 8)) || 50;
+    const X = b => pad.l + (b / 6) / maxOvers * plotW;
+    const Y = r => pad.t + plotH - (r / yMax) * plotH;
+
+    // Grid and axes
+    ctx.font = `600 ${fs}px ${col.font}`;
+    ctx.lineWidth = 1; ctx.strokeStyle = col.grid; ctx.fillStyle = col.label;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let r = 0; r <= yMax; r += yStep) {
+        ctx.beginPath(); ctx.moveTo(pad.l, Y(r)); ctx.lineTo(pad.l + plotW, Y(r)); ctx.stroke();
+        ctx.fillText(String(r), pad.l - 8, Y(r));
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let o = 0; o <= maxOvers; o += xStep) {
+        ctx.beginPath(); ctx.moveTo(X(o * 6), pad.t); ctx.lineTo(X(o * 6), pad.t + plotH); ctx.stroke();
+        ctx.fillText(String(o), X(o * 6), pad.t + plotH + 6);
+    }
+    ctx.fillText('Overs', pad.l + plotW / 2, pad.t + plotH + fs + 12);
+    ctx.save(); ctx.translate(fs * 0.9, pad.t + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText('Runs', 0, 0); ctx.restore();
+
+    // Target (2nd innings)
+    if (inn2 && match.target) {
+        ctx.save(); ctx.setLineDash([8, 6]); ctx.lineWidth = 2; ctx.strokeStyle = col.label;
+        ctx.beginPath(); ctx.moveTo(pad.l, Y(match.target)); ctx.lineTo(pad.l + plotW, Y(match.target)); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = col.label; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText(`Target ${match.target}`, pad.l + 6, Y(match.target) - 4);
+    }
+
+    if (!series.some(s => s.balls > 0 || s.runs > 0)) {
+        ctx.fillStyle = col.label; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `600 ${fs + 2}px ${col.font}`;
+        ctx.fillText('No balls bowled yet', pad.l + plotW / 2, pad.t + plotH / 2);
+        return;
+    }
+
+    // Worm lines, wicket dots and the current score at each line's end
+    series.forEach((s, i) => {
+        ctx.strokeStyle = col.lines[i]; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.beginPath();
+        s.points.forEach((p, k) => { if (k === 0) ctx.moveTo(X(p.balls), Y(p.runs)); else ctx.lineTo(X(p.balls), Y(p.runs)); });
+        ctx.stroke();
+        s.wicketPoints.forEach(p => {
+            ctx.beginPath(); ctx.arc(X(p.balls), Y(p.runs), fs * 0.36, 0, Math.PI * 2);
+            ctx.fillStyle = col.wicket; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = col.surface; ctx.stroke();
+        });
+        const last = s.points[s.points.length - 1];
+        ctx.fillStyle = col.lines[i]; ctx.font = `800 ${fs}px ${col.font}`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(`${s.runs}/${s.wickets}`,Math.min(X(last.balls) + 8, cssW - pad.r + 6), Y(last.runs) - (i === 1 ? fs * 0.9 : 0));
+    });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2664,8 +2952,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function wireUpEvents() {
-    $('tabDashboard').addEventListener('click', () => switchTab('dashboardScreen','tabDashboard')); $('tabLog').addEventListener('click', () => switchTab('logScreen','tabLog'));$('tabScorecard').addEventListener('click', () => switchTab('scorecardScreen','tabScorecard'));
-    $('themeToggle').addEventListener('click', () => { document.body.classList.toggle('light-mode'); appTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';$('themeToggle').textContent = appTheme === 'light' ? '🌙' : '☀️'; if (wCtx) drawWagonCanvas(); localStorage.setItem('live_match_theme', appTheme); });
+    $('tabDashboard').addEventListener('click', () => switchTab('dashboardScreen','tabDashboard')); $('tabLog').addEventListener('click', () => switchTab('logScreen','tabLog'));$('tabScorecard').addEventListener('click', () => switchTab('scorecardScreen','tabScorecard')); $('tabGraphs').addEventListener('click', () => switchTab('graphsScreen','tabGraphs'));
+    window.addEventListener('resize', () => { if (!$('graphsScreen').classList.contains('hidden')) renderScoreWorm(); });
+    $('themeToggle').addEventListener('click', () => { document.body.classList.toggle('light-mode'); appTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';$('themeToggle').textContent = appTheme === 'light' ? '🌙' : '☀️'; if (wCtx) drawWagonCanvas(); if (!$('graphsScreen').classList.contains('hidden')) renderScoreWorm(); localStorage.setItem('live_match_theme', appTheme); });
     $('btnStartMatch').addEventListener('click', startMatch);
     $('teamAName').addEventListener('input', () => updateTeamHeader('A'));$('teamBName').addEventListener('input', () => updateTeamHeader('B'));
     $('oversDown').addEventListener('click', () => adjustStepper('inputOvers', -1));$('oversUp').addEventListener('click', () => adjustStepper('inputOvers', 1));
