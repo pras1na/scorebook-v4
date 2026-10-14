@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v4.1</title>
+    <title>Digital Scorebook v4.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -37,6 +37,10 @@
         .broadcast-badge.fail { border-color: #f6ad55; color: #f6ad55; background: rgba(246,173,85,0.14); }
         .go-live-btn.is-live { background: rgba(255,68,85,0.12); border-color: var(--danger); color: var(--danger); animation: liveBlink 1.6s ease-in-out infinite; }
         @keyframes liveBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .pending-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 150; display: flex; align-items: center; gap: 10px; background: var(--surface3); border: 1px solid var(--warn); color: var(--text); padding: 8px 12px; border-radius: var(--radius); font-size: 0.85em; box-shadow: 0 4px 18px rgba(0,0,0,0.45); max-width: calc(100vw - 24px); }
+        .pending-banner span { font-weight: 600; }
+        .pb-btn { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; font-size: 0.85em; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; white-space: nowrap; }
+        .pb-btn.pb-primary { background: var(--warn); color: var(--bg); border-color: var(--warn); }
         .corrections-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 1em; padding: 7px 11px; border-radius: var(--radius); cursor: pointer; margin-right: 8px; opacity: 0.7; }
         .corrections-btn:hover { opacity: 1; color: var(--text-muted); }
 
@@ -170,7 +174,7 @@
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
-        /* Confirmations (e.g. Wipe Data) are opened from inside other modals such as Match Complete, so they must sit above them. */
+        /* Confirm dialog must sit above every other modal (e.g. Match Complete), otherwise it opens hidden behind it */
         #confirmModal { z-index: 1200; }
         .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 24px; width: 100%; max-width: 400px; transition: border-color 0.2s; }
         .modal-title { font-family: var(--font-display); font-size: 1.4em; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
@@ -261,6 +265,22 @@
             <div id="confirmModalMsg" style="color:var(--text-muted); margin-bottom:24px; font-size:1.1em;"></div>
             <button id="btnConfirmAction" class="modal-btn confirm">Yes</button>
             <button id="btnCancelAction" class="modal-btn cancel">Cancel</button>
+        </div>
+    </div>
+
+    <div id="pendingShotBanner" class="pending-banner hidden" role="status">
+        <span id="pendingBannerText"></span>
+        <button id="btnBannerMap" class="pb-btn">Show map</button>
+        <button id="btnBannerSkip" class="pb-btn pb-primary">Skip</button>
+    </div>
+
+    <div id="pendingShotsModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-height:85vh; overflow-y:auto; text-align:left;">
+            <div class="modal-title">Unmapped Shots</div>
+            <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:12px; line-height:1.4;">Shots still waiting for a spot on the wagon wheel. Map them, or skip any you can't place — a skipped shot stays in the log, just without a location.</p>
+            <div id="pendingShotsList" class="delivery-list"></div>
+            <button id="btnSkipAllShots" class="modal-btn warn">Skip all</button>
+            <button id="btnClosePendingShots" class="modal-btn cancel">Close</button>
         </div>
     </div>
 
@@ -538,7 +558,7 @@
 
     <!-- SETUP SCREEN -->
     <div id="setupScreen" class="container">
-        <div class="setup-logo"><h1>🏏 Scorebook V4.1</h1></div>
+        <div class="setup-logo"><h1>🏏 Scorebook V4.2</h1></div>
         <div style="display:flex; gap:14px; margin-bottom:24px; flex-wrap:wrap;">
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableWagon">
                 <input type="checkbox" id="enableWagon" checked>
@@ -762,6 +782,10 @@
                     </div>
                     <select id="wPlayerSelect" style="display:none; width:calc(100% - 28px); margin:10px 14px; padding:8px; background:var(--surface3); border:1px solid var(--border); color:var(--text); border-radius:6px; outline:none; appearance:none;"></select>
                     <div id="wqBox" style="padding:12px 14px; background:var(--surface); color:var(--text-muted); font-family:var(--font-display); font-size:0.85em; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border);">No pending shots</div>
+                    <div id="wqActions" class="hidden" style="padding:6px 14px; gap:8px; display:flex; background:var(--surface2); border-bottom:1px solid var(--border);">
+                        <button id="btnSkipShot" class="btn-action" style="flex:1;">Skip shot</button>
+                        <button id="btnReviewShots" class="btn-action" style="flex:1;">Review</button>
+                    </div>
                     <div style="padding:8px 14px; display:flex; gap:8px; background:var(--surface2); border-bottom:1px solid var(--border);">
                         <button id="trajGround" class="btn-action" style="flex:1; background:rgba(0,229,176,0.15); color:var(--accent); border-color:rgba(0,229,176,0.3);">Ground</button>
                         <button id="trajAir" class="btn-action" style="flex:1;">In Air</button>
@@ -1640,15 +1664,136 @@ function triggerAutoDownload(label) {
 // ═══════════════════════════════════════════════════════════
 //  THE QUEUE & INNINGS SYSTEM
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  PENDING SHOTS — visibility, skip, review, and safety valves
+//  A shot waiting to be mapped holds up the over summary / bowler
+//  prompt. That's deliberate, but it must never be able to hold the
+//  match hostage invisibly, so: it's always shown, always skippable,
+//  and never carried across an innings boundary.
+// ═══════════════════════════════════════════════════════════
+function getPendingShots(allInnings = false) {
+    return match.log.filter(l => l.wagon && l.wagon.mapStatus === 'pending' && (allInnings || (l.innings || 1) === match.innings));
+}
+
+function clearShotPending(l, extraFlags) {
+    l.wagon.mapStatus = 'unmapped';
+    l.wagon.skipped = true;
+    if (extraFlags) Object.assign(l.wagon, extraFlags);
+    delete l.wagon.x; delete l.wagon.y;
+}
+
+// True when something is actually queued up behind the mapping step
+// (an over recap, a new batter/bowler, or an innings/match end) — i.e.
+// when a pending shot is what's holding play up, not just a normal
+// mid-over shot waiting for its tap.
+function somethingWaitingOnMapping() {
+    if (match.queue.overSummaryPending || match.queue.newBatter || match.queue.newBowler) return true;
+    const maxWickets = match.maxWickets !== undefined ? match.maxWickets : 10;
+    const allOut = match.wickets >= maxWickets;
+    const oversDone = match.totalLegalBalls >= match.targetOvers * 6;
+    const chased = match.innings === 2 && match.target !== null && match.runs >= match.target;
+    return allOut || oversDone || chased;
+}
+
+function refreshPendingBanner() {
+    const banner = $('pendingShotBanner');
+    if (!banner) return;
+    const pending = match.wagonEnabled ? getPendingShots() : [];
+    const blocked = pending.length > 0 && somethingWaitingOnMapping();
+    banner.classList.toggle('hidden', !blocked);
+    if (!blocked) return;
+    $('pendingBannerText').textContent = pending.length === 1
+        ? '1 shot still to map before play can continue'
+        : `${pending.length} shots still to map before play can continue`;
+    $('btnBannerSkip').textContent = pending.length > 1 ? 'Review' : 'Skip';
+}
+
+function afterShotResolved() {
+    activeWagonBallId = null;
+    currentTraj = 'ground';
+    drawWagonCanvas(); updateWagonQueueUI(); updateWagonStats(); renderLog(); renderOverTracker();
+    triggerNextActionQueue();
+    syncToCloud();
+}
+
+function skipWagonShot(id) {
+    const target = match.log.find(l => l.id === id);
+    if (!target || !target.wagon || target.wagon.mapStatus !== 'pending') return;
+    saveState();
+    clearShotPending(target);
+    afterShotResolved();
+}
+
+function skipAllPendingShots() {
+    const all = getPendingShots(true);
+    if (!all.length) return;
+    saveState();
+    all.forEach(l => clearShotPending(l));
+    afterShotResolved();
+}
+
+// Used when an innings or the match ends with shots still unmapped, and
+// on resume for shots stranded from an earlier innings. They're closed
+// out (not silently dropped): flagged autoSkipped and noted in the edit
+// history so it's clear what happened.
+function autoSkipPendingShots(reason, allInnings = false) {
+    if (!match.wagonEnabled) return 0;
+    const pending = getPendingShots(allInnings);
+    if (!pending.length) return 0;
+    pending.forEach(l => clearShotPending(l, { autoSkipped: true }));
+    activeWagonBallId = null;
+    if (!Array.isArray(match.editHistory)) match.editHistory = [];
+    match.editHistory.push({ time: Date.now(), summary: `${pending.length} unmapped shot${pending.length === 1 ? '' : 's'} left without a location ${reason}.` });
+    return pending.length;
+}
+
+function openPendingShotsModal() {
+    const list = $('pendingShotsList');
+    const shots = getPendingShots(true);
+    if (!shots.length) {
+        $('pendingShotsModal').classList.add('hidden');
+        return;
+    }
+    list.innerHTML = shots.map(l => {
+        const current = (l.innings || 1) === match.innings;
+        const where = current ? '' : ` <span class="dr-tag">${(l.innings || 1) === 1 ? '1st' : '2nd'} innings</span>`;
+        const label = l.wagon.isWicket ? `Over ${escHtml(l.over)} — ${escHtml(l.desc || '')}` : `Over ${escHtml(l.over)} — ${escHtml(l.desc || '')}`;
+        const mapBtn = current ? `<button class="pb-btn" data-map="${l.id}">Map</button>` : '';
+        return `<div class="delivery-row"><span class="dr-desc">${label}${where}</span>${mapBtn}<button class="pb-btn" data-skip="${l.id}">Skip</button></div>`;
+    }).join('');
+    list.querySelectorAll('[data-skip]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        skipWagonShot(b.dataset.skip);
+        openPendingShotsModal();
+    }));
+    list.querySelectorAll('[data-map]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        $('pendingShotsModal').classList.add('hidden');
+        setActiveWagonBall(b.dataset.map);
+        scrollToWagonMap();
+        showToast('Tap the field to place the shot');
+    }));
+    $('pendingShotsModal').classList.remove('hidden');
+}
+
+function scrollToWagonMap() {
+    const tab = $('tabDashboard'); if (tab) tab.click();
+    const el = $('wagonCol');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 function triggerNextActionQueue() {
     updateControlStates();
+    refreshPendingBanner();
 
-    // Pending wagon shots get mapped first — before the over recap, and
-    // before offering the next bowler — so the shot map for the over is
-    // already complete by the time it's being reviewed/reconciled.
-    // Only the current innings counts: the wagon can't offer an earlier
-    // innings' shots for placement, so they'd block the queue for good.
-    if (match.wagonEnabled && match.log.some(x => x.wagon && x.wagon.mapStatus === 'pending' && (x.innings || 1) === match.innings)) return;
+    // Pending wagon shots from THIS innings get mapped first — before the
+    // over recap, and before offering the next bowler — so the shot map
+    // for the over is already complete by the time it's being reviewed.
+    // Scoped to the current innings on purpose: this check used to look
+    // across the whole match while the on-screen queue only showed the
+    // current innings, so one orphaned shot from innings 1 could block
+    // innings 2 forever with nothing on screen to explain why.
+    if (match.wagonEnabled && getPendingShots().length) return;
 
     // Always-on checkpoint: recap the over just completed before offering
     // anything else, so it can be reconciled before moving on.
@@ -1670,27 +1815,23 @@ function triggerNextActionQueue() {
     if (match.queue.newBowler) { openSelectionModal('bowler'); return; }
 }
 
+function pendingShotNote() {
+    const n = match.wagonEnabled ? getPendingShots().length : 0;
+    return n ? ` ${n} shot${n === 1 ? ' is' : 's are'} still unmapped and will be left without a location.` : '';
+}
+
 function promptEndInnings() {
-    $('inningsModalMsg').textContent = `${match.teams[match.battingTeam].name} scored ${match.runs}/${match.wickets} in ${fmtOv(match.totalLegalBalls)} overs.`;
+    $('inningsModalMsg').textContent = `${match.teams[match.battingTeam].name} scored ${match.runs}/${match.wickets} in ${fmtOv(match.totalLegalBalls)} overs.` + pendingShotNote();
     $('inningsModal').classList.remove('hidden');
 }
 
-function promptEndMatch() { $('matchEndModal').classList.remove('hidden'); }
-
-// Shots still waiting for a field position when the innings or match ends
-// can't be placed afterwards, so they're marked unmapped (no position, like
-// a dot ball) instead of being left pending.
-function autoSkipPendingShots() {
-    const pending = match.log.filter(l => l.wagon && l.wagon.mapStatus === 'pending' && (l.innings || 1) === match.innings);
-    if (!pending.length) return;
-    pending.forEach(l => { l.wagon.mapStatus = 'unmapped'; });
-    activeWagonBallId = null;
-    if (match.wagonEnabled) { drawWagonCanvas(); updateWagonQueueUI(); }
-    showToast(`${pending.length} unplaced shot${pending.length === 1 ? '' : 's'} skipped`);
+function promptEndMatch() {
+    $('matchEndModalMsg').textContent = 'Target reached or innings over. Finalize the match?' + pendingShotNote();
+    $('matchEndModal').classList.remove('hidden');
 }
 
 function triggerMatchEnd() {
-    autoSkipPendingShots();
+    autoSkipPendingShots('when the match ended');
     const now = Date.now();
     if (match.active.strikerIdx !== null) {
         let s = match.teams[match.battingTeam].players[match.active.strikerIdx];
@@ -2201,7 +2342,11 @@ function forceEndOver() {
 
 function endInnings() {
     if (match.innings !== 1) return;
-    autoSkipPendingShots();
+
+    // Whatever's still unmapped when the innings is ended (e.g. via the
+    // manual End Inns button, which skips the normal mapping gate) is
+    // closed out here, so it can't follow the match into innings 2.
+    autoSkipPendingShots('when the innings ended');
 
     // Close out the active batters' times
     const now = Date.now();
@@ -2824,7 +2969,8 @@ function setActiveWagonBall(id) {
 function updateWagonQueueUI() {
     const box = $('wqBox');
     if (!box) return;
-    const pending = match.log.filter(l => l.wagon && l.wagon.mapStatus === 'pending' && (l.innings || 1) === match.innings);
+    const pending = getPendingShots();
+    const actions = $('wqActions');
 
     if (!activeWagonBallId && pending.length) {
         activeWagonBallId = pending[0].id;
@@ -2837,6 +2983,8 @@ function updateWagonQueueUI() {
     if (!activeWagonBallId) {
         box.textContent = 'No pending shots';
         $('trajGround').style.opacity = 0.4; $('trajAir').style.opacity = 0.4;
+        if (actions) actions.classList.add('hidden');
+        refreshPendingBanner();
         return;
     }
 
@@ -2844,6 +2992,11 @@ function updateWagonQueueUI() {
     const w = active.wagon;
     const label = w.isWicket ? `WICKET (${w.wicketType})` : `${w.runs} run${w.runs === 1 ? '' : 's'}`;
     box.textContent = `Tap the field to place: ${label} — ${pending.length} pending`;
+    if (actions) {
+        actions.classList.remove('hidden');
+        $('btnReviewShots').textContent = pending.length > 1 ? `Review all (${pending.length})` : 'Review';
+    }
+    refreshPendingBanner();
 
     const locked = !!w.lockedTraj;
     $('trajGround').style.opacity = locked ? 0.4 : 1;
@@ -2928,6 +3081,21 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (typeof match.freeHit !== 'boolean') match.freeHit = false;
                 if (typeof match.enableFreeHit !== 'boolean') match.enableFreeHit = true;
                 if (match.maxWickets === undefined) match.maxWickets = 10;
+                // Shots left pending from an EARLIER innings can't be placed from
+                // here (the map only shows the current innings) — close them out
+                // so they can't block play. Only touches entries explicitly tagged
+                // with a different innings, never untagged legacy ones.
+                match.log.forEach(l => {
+                    if (l.wagon && l.wagon.mapStatus === 'pending' && l.innings !== undefined && l.innings !== match.innings) {
+                        clearShotPending(l, { autoSkipped: true });
+                        if (!match._strandedClosed) match._strandedClosed = 0;
+                        match._strandedClosed++;
+                    }
+                });
+                if (match._strandedClosed) {
+                    match.editHistory.push({ time: Date.now(), summary: `${match._strandedClosed} shot${match._strandedClosed === 1 ? '' : 's'} stranded from an earlier innings were closed out on resume.` });
+                    delete match._strandedClosed;
+                }
                 if (typeof match.broadcastEnabled !== 'boolean') match.broadcastEnabled = false;
                 scorecardInningsView = match.innings === 2 ? 2 : 1;
                 
@@ -2943,6 +3111,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 updateGoLiveButton();
                 publishBroadcast();
                 if (match.active.strikerIdx === null) openSelectionModal('striker'); else if (match.active.nonStrikerIdx === null) openSelectionModal('nonStriker'); else if (match.active.bowlerIdx === null) openSelectionModal('bowler');
+                else triggerNextActionQueue(); // surface any recap / new-batter / new-bowler prompt that was waiting when the match was saved
                 showToast('Match resumed — undo history starts fresh');
             } catch (e) { localStorage.removeItem('live_match_backup'); }
         }, () => { localStorage.removeItem('live_match_backup'); try { localStorage.removeItem(BROADCAST_KEY); } catch (e) {} });
@@ -2983,6 +3152,16 @@ function wireUpEvents() {
     $('btnCloseLiveModal').addEventListener('click', () => $('goLiveModal').classList.add('hidden'));
 
     // Corrections entry point + menu
+    $('btnSkipShot').addEventListener('click', () => { if (activeWagonBallId) skipWagonShot(activeWagonBallId); });
+    $('btnReviewShots').addEventListener('click', openPendingShotsModal);
+    $('btnBannerMap').addEventListener('click', scrollToWagonMap);
+    $('btnBannerSkip').addEventListener('click', () => {
+        const pending = getPendingShots();
+        if (pending.length > 1) openPendingShotsModal();
+        else if (pending.length === 1) skipWagonShot(pending[0].id);
+    });
+    $('btnSkipAllShots').addEventListener('click', () => { skipAllPendingShots(); $('pendingShotsModal').classList.add('hidden'); });
+    $('btnClosePendingShots').addEventListener('click', () => $('pendingShotsModal').classList.add('hidden'));
     $('btnOpenCorrections').addEventListener('click', openCorrectionsScreen);
     $('btnCloseCorrections').addEventListener('click', () => $('correctionsModal').classList.add('hidden'));
     $('optRename').addEventListener('click', openRenameCorrectionTool);
