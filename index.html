@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v4.3</title>
+    <title>Digital Scorebook v4.4</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -74,6 +74,12 @@
         .navbar button.tab-btn.active { color: var(--accent); }
         .navbar button.tab-btn.active::after { left: 20%; right: 20%; }
         .theme-toggle { background: var(--surface2); border: 1px solid var(--border); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1em; transition: all 0.2s; }
+        /* Phones: the bar is wider than the screen, so Go Live / corrections / theme drop to a second row */
+        @media (max-width: 600px) {
+            .navbar { flex-wrap: wrap; justify-content: flex-end; padding: 0 8px 6px; }
+            .nav-tabs { flex: 1 1 100%; justify-content: space-between; }
+            .navbar button.tab-btn { padding: 11px 8px; font-size: 0.9em; }
+        }
         
         .container { max-width: 640px; margin: 0 auto; padding: 12px 16px; }
         .container.expanded { max-width: 1100px; }
@@ -117,13 +123,13 @@
         .center-block { flex: 2; text-align: center; }
         .main-score { font-family: var(--font-display); font-size: 3.2em; font-weight: 800; line-height: 1; }
         .overs-display { font-family: var(--font-display); font-size: 1em; font-weight: 600; color: var(--text-muted); margin-top: 4px; }
-        .run-rates-display { font-size: 0.8em; color: var(--text-dim); margin-top: 4px; font-weight: 600; font-family: var(--font-display); }
-        .partnership-display { font-size: 0.8em; color: var(--text-dim); margin-top: 4px; font-weight: 600; font-family: var(--font-display); }
+        .run-rates-display { font-size: 0.9em; color: var(--text-dim); margin-top: 4px; font-weight: 600; font-family: var(--font-display); }
+        .partnership-display { font-size: 0.9em; color: var(--text-dim); margin-top: 4px; font-weight: 600; font-family: var(--font-display); }
         .target-display { font-family: var(--font-display); font-size: 0.95em; font-weight: 700; color: var(--warn); margin-top: 4px; }
         .free-hit-badge { display: inline-block; font-family: var(--font-display); font-size: 0.85em; font-weight: 800; letter-spacing: 0.05em; color: var(--bg); background: var(--warn); padding: 3px 10px; border-radius: 20px; margin-top: 6px; animation: pulse 1.4s infinite; }
         
         .over-tracker { background: var(--surface2); border-top: 1px solid var(--border); padding: 7px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .over-tracker-label { font-family: var(--font-display); font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
+        .over-tracker-label { font-family: var(--font-display); font-size: 0.85em; font-weight: 700; text-transform: uppercase; color: var(--text-dim); white-space: nowrap; }
         .over-balls { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
         .ball-pip { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 0.85em; font-weight: 700; background: var(--surface3); color: var(--text-muted); border: 1px solid var(--border); position: relative; }
         .ball-pip.wicket { background: var(--danger-glow); color: var(--danger); border-color: var(--danger); }
@@ -137,7 +143,7 @@
         .dashboard-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 8px; overflow: hidden; }
         .section-header { padding: 7px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface2); gap: 8px; }
         .section-header-actions { display: flex; gap: 6px; }
-        .section-title { font-family: var(--font-display); font-size: 0.75em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+        .section-title { font-family: var(--font-display); font-size: 0.85em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
         
         .player-row { padding: 8px 16px; border-bottom: 1px solid var(--border); }
         .player-row:last-child { border-bottom: none; }
@@ -146,12 +152,12 @@
         .player-name { font-family: var(--font-display); font-size: 1.15em; font-weight: 700; color: var(--text); cursor: pointer; text-decoration: underline dotted var(--text-dim); text-underline-offset: 4px; background: none; border: none; padding: 0; }
         .player-name:hover, .player-name:focus-visible { color: var(--accent); text-decoration-color: var(--accent); }
         .player-stats { font-family: var(--font-display); font-size: 1.3em; font-weight: 800; color: var(--text); }
-        .player-sub-line { font-size: 0.8em; color: var(--text-muted); font-family: var(--font-display); display: flex; gap: 14px; }
+        .player-sub-line { font-size: 0.9em; color: var(--text-muted); font-family: var(--font-display); display: flex; gap: 14px; }
         .sub-stat span { color: var(--text-dim); font-size: 0.9em; margin-right: 2px; }
 
         .control-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; margin-bottom: 8px; }
         .control-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .btn-run { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-display); font-size: 1.5em; font-weight: 800; padding: 11px 8px; border-radius: var(--radius); cursor: pointer; transition: 0.15s; }
+        .btn-run { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-display); font-size: 1.5em; font-weight: 800; padding: 15px 8px; border-radius: var(--radius); cursor: pointer; transition: 0.15s; }
         .btn-run:hover:not(:disabled) { background: var(--surface3); }
         .btn-run:active:not(:disabled) { transform: scale(0.95); }
         .btn-run:disabled { opacity: 0.3; cursor: not-allowed; }
@@ -160,11 +166,11 @@
         .btn-run.btn-extra { background: rgba(255,179,0,0.08); color: var(--warn); border-color: rgba(255,179,0,0.3); font-size: 1em; }
         .btn-run.btn-wicket { grid-column: span 2; background: rgba(255,68,85,0.1); color: var(--danger); border-color: rgba(255,68,85,0.3); font-size: 1em; }
         .control-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
-        .btn-action { padding: 11px; border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font-display); font-size: 0.8em; font-weight: 700; text-transform: uppercase; cursor: pointer; background: var(--surface2); color: var(--text-muted); transition: 0.15s; }
+        .btn-action { padding: 13px; border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--font-display); font-size: 0.9em; font-weight: 700; text-transform: uppercase; cursor: pointer; background: var(--surface2); color: var(--text-muted); transition: 0.15s; }
         .btn-action.warn-btn { color: var(--warn); border-color: rgba(255,179,0,0.3); }
         .btn-action.info-btn { color: var(--accent2); border-color: rgba(0,153,255,0.3); }
-        .btn-small-action { background: var(--surface3); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-family: var(--font-display); font-size: 0.75em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); cursor: pointer; }
-        .shortcut-hint { text-align: center; font-family: var(--font-display); font-size: 0.7em; color: var(--text-dim); margin-top: 6px; letter-spacing: 0.03em; }
+        .btn-small-action { background: var(--surface3); border: 1px solid var(--border); border-radius: 6px; padding: 7px 12px; font-family: var(--font-display); font-size: 0.85em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); cursor: pointer; }
+        .shortcut-hint { text-align: center; font-family: var(--font-display); font-size: 0.8em; color: var(--text-dim); margin-top: 6px; letter-spacing: 0.03em; }
         @media (max-height: 750px) { .shortcut-hint { display: none; } }
 
         /* Modals & Helpers */
@@ -234,7 +240,7 @@
         @keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
 
         .wagon-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
-        .wagon-panel-header { padding: 10px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); font-family: var(--font-display); font-size: 0.75em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+        .wagon-panel-header { padding: 10px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); font-family: var(--font-display); font-size: 0.85em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
         .canvas-container { padding: 14px; background: var(--surface); width: 100%; display: flex; justify-content: center; }
         #fieldCanvas { cursor: crosshair; display: block; max-width: 100%; }
 
@@ -558,7 +564,7 @@
 
     <!-- SETUP SCREEN -->
     <div id="setupScreen" class="container">
-        <div class="setup-logo"><h1>🏏 Scorebook V4.3</h1></div>
+        <div class="setup-logo"><h1>🏏 Scorebook V4.4</h1></div>
         <div style="display:flex; gap:14px; margin-bottom:24px; flex-wrap:wrap;">
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableWagon">
                 <input type="checkbox" id="enableWagon" checked>
