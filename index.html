@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v4.4</title>
+    <title>Digital Scorebook v4.5</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -564,7 +564,7 @@
 
     <!-- SETUP SCREEN -->
     <div id="setupScreen" class="container">
-        <div class="setup-logo"><h1>🏏 Scorebook V4.4</h1></div>
+        <div class="setup-logo"><h1>🏏 Scorebook V4.5</h1></div>
         <div style="display:flex; gap:14px; margin-bottom:24px; flex-wrap:wrap;">
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableWagon">
                 <input type="checkbox" id="enableWagon" checked>
@@ -2410,6 +2410,8 @@ function endInnings() {
 //  UI DASHBOARD UPDATES
 // ═══════════════════════════════════════════════════════════
 function updateDashboard() {
+    $('badgeTeamA').textContent = match.battingTeam === 'A' ? 'Batting' : 'Fielding';
+    $('badgeTeamB').textContent = match.battingTeam === 'B' ? 'Batting' : 'Fielding';
     $('mainScoreRuns').textContent = match.runs;
     $('mainScoreWickets').textContent = match.wickets;
     $('oversDisplay').textContent = fmtOv(match.totalLegalBalls);
