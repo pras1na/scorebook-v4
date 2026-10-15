@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v4.2</title>
+    <title>Digital Scorebook v4.3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -558,7 +558,7 @@
 
     <!-- SETUP SCREEN -->
     <div id="setupScreen" class="container">
-        <div class="setup-logo"><h1>🏏 Scorebook V4.2</h1></div>
+        <div class="setup-logo"><h1>🏏 Scorebook V4.3</h1></div>
         <div style="display:flex; gap:14px; margin-bottom:24px; flex-wrap:wrap;">
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableWagon">
                 <input type="checkbox" id="enableWagon" checked>
@@ -1877,6 +1877,21 @@ function swapBatters() {
 //  PLAYER SELECTION, RENAME, RETIRE & UNDO
 // ═══════════════════════════════════════════════════════════
 
+// Name of the bowler who bowled before the current bowler in this innings
+// (read from the log), or null if the current bowler opened the innings.
+function bowlerBeforeCurrentOver() {
+    const cur = match.teams[match.fieldingTeam].players[match.active.bowlerIdx];
+    if (!cur) return null;
+    const resolve = logInningsResolver(match.log);
+    for (let i = match.log.length - 1; i >= 0; i--) {
+        const l = match.log[i];
+        if (!l || l.type === 'summary' || l.type === 'retirement' || resolve(l, i) !== match.innings) continue;
+        const b = l.bowler || ((l.desc || '').includes(' to ') ? l.desc.split(' to ')[0].trim() : '');
+        if (b && b !== cur.name) return b;
+    }
+    return null;
+}
+
 // task: 'striker' | 'nonStriker' | 'newBatter' | 'bowler'
 function openSelectionModal(task) {
     currentSelectionTask = task;
@@ -1893,6 +1908,10 @@ function openSelectionModal(task) {
             }
             return true;
         });
+        // Ends usually alternate, so offer whoever bowled the over before this one first.
+        const prevName = bowlerBeforeCurrentOver();
+        const k = eligible.findIndex(({ p }) => p.name === prevName);
+        if (k > 0) eligible.unshift(eligible.splice(k, 1)[0]);
     } else {
         const batTeam = match.teams[match.battingTeam].players;
         eligible = batTeam.map((p, idx) => ({ p, idx })).filter(({ p, idx }) => {
@@ -2918,7 +2937,9 @@ function drawWagonCanvas() {
         const color = isW ? W_COLORS.W : (W_COLORS[w.runs] !== undefined ? W_COLORS[w.runs] : W_COLORS[0]);
         const tx = w.x * W, ty = w.y * H;
         ctx.beginPath(); ctx.moveTo(mx, my - 8); ctx.lineTo(tx, ty);
+        ctx.setLineDash(w.trajectory === 'air' ? [6, 5] : []); // aerial shots dashed, as in the report
         ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.globalAlpha = 0.85; ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.setLineDash([]);
         ctx.beginPath(); ctx.arc(tx, ty, 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
     });
 
