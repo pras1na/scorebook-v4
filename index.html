@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Digital Scorebook v4.0</title>
+    <title>Digital Scorebook v4.2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -37,6 +37,10 @@
         .broadcast-badge.fail { border-color: #f6ad55; color: #f6ad55; background: rgba(246,173,85,0.14); }
         .go-live-btn.is-live { background: rgba(255,68,85,0.12); border-color: var(--danger); color: var(--danger); animation: liveBlink 1.6s ease-in-out infinite; }
         @keyframes liveBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .pending-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 150; display: flex; align-items: center; gap: 10px; background: var(--surface3); border: 1px solid var(--warn); color: var(--text); padding: 8px 12px; border-radius: var(--radius); font-size: 0.85em; box-shadow: 0 4px 18px rgba(0,0,0,0.45); max-width: calc(100vw - 24px); }
+        .pending-banner span { font-weight: 600; }
+        .pb-btn { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; font-size: 0.85em; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; white-space: nowrap; }
+        .pb-btn.pb-primary { background: var(--warn); color: var(--bg); border-color: var(--warn); }
         .corrections-btn { background: none; border: 1px solid var(--border); color: var(--text-dim); font-size: 1em; padding: 7px 11px; border-radius: var(--radius); cursor: pointer; margin-right: 8px; opacity: 0.7; }
         .corrections-btn:hover { opacity: 1; color: var(--text-muted); }
 
@@ -170,6 +174,8 @@
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
+        /* Confirm dialog must sit above every other modal (e.g. Match Complete), otherwise it opens hidden behind it */
+        #confirmModal { z-index: 1200; }
         .modal-content { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 24px; width: 100%; max-width: 400px; transition: border-color 0.2s; }
         .modal-title { font-family: var(--font-display); font-size: 1.4em; font-weight: 800; text-transform: uppercase; margin-bottom: 20px; text-align: center; }
         .modal-label { font-family: var(--font-display); font-size: 0.8em; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; display: block; }
@@ -203,6 +209,22 @@
         .innings-context { display: block; font-size: 0.65em; font-weight: 600; text-transform: none; color: var(--text-muted); letter-spacing: 0; margin-top: 2px; }
         .sc-innings-tab-btn { flex: 1; max-width: 200px; padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-muted); font-family: var(--font-display); font-size: 0.95em; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: 0.15s; }
         .sc-innings-tab-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(0,229,176,0.1); }
+        .fow-line { font-family: var(--font-display); font-size: 0.85em; color: var(--text-muted); padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border); border-top: none; border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius); margin-bottom: 16px; text-align: left; line-height: 1.5; }
+        .fow-line b { font-weight: 700; color: var(--text); text-transform: uppercase; }
+        .pship-table td:nth-child(2) { text-align: left; }
+        .pship-table .not-out { color: var(--accent); font-size: 0.85em; font-weight: 700; margin-left: 6px; }
+        .pship-table .ended-note { color: var(--text-dim); font-size: 0.85em; margin-left: 6px; }
+        .pship-note { font-size: 0.75em; color: var(--text-dim); margin: 2px 0 16px; text-align: left; }
+
+        .graph-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; }
+        .graph-title { font-family: var(--font-display); font-size: 0.8em; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+        #wormCanvas { display: block; width: 100%; }
+        .worm-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; font-family: var(--font-display); font-size: 1em; font-weight: 600; color: var(--text); }
+        .worm-legend .lg { display: inline-flex; align-items: center; gap: 8px; }
+        .worm-legend .sw { width: 26px; height: 4px; border-radius: 2px; }
+        .worm-legend .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--danger); border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--danger); }
+        .worm-legend .dash { width: 26px; height: 0; border-top: 2px dashed var(--text-muted); }
+
         .sc-hide-live { display: none; }
         @media print { .sc-hide-live { display: block !important; } }
 
@@ -221,7 +243,7 @@
             .navbar, .control-section, .wagon-col, .modal-overlay, .over-tracker, #btnDownloadBackup { display: none !important; }
             .container { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
             .app-layout { display: block !important; }
-            #dashboardScreen, #logScreen, #setupScreen { display: none !important; }
+            #dashboardScreen, #logScreen, #graphsScreen, #setupScreen { display: none !important; }
             #scorecardScreen { display: block !important; }
             table, th, td { border: 1px solid #000; color: #000 !important; }
             th { background: #eee !important; color: #000 !important; }
@@ -243,6 +265,22 @@
             <div id="confirmModalMsg" style="color:var(--text-muted); margin-bottom:24px; font-size:1.1em;"></div>
             <button id="btnConfirmAction" class="modal-btn confirm">Yes</button>
             <button id="btnCancelAction" class="modal-btn cancel">Cancel</button>
+        </div>
+    </div>
+
+    <div id="pendingShotBanner" class="pending-banner hidden" role="status">
+        <span id="pendingBannerText"></span>
+        <button id="btnBannerMap" class="pb-btn">Show map</button>
+        <button id="btnBannerSkip" class="pb-btn pb-primary">Skip</button>
+    </div>
+
+    <div id="pendingShotsModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+        <div class="modal-content" style="max-height:85vh; overflow-y:auto; text-align:left;">
+            <div class="modal-title">Unmapped Shots</div>
+            <p style="color:var(--text-muted); font-size:0.85em; margin-bottom:12px; line-height:1.4;">Shots still waiting for a spot on the wagon wheel. Map them, or skip any you can't place — a skipped shot stays in the log, just without a location.</p>
+            <div id="pendingShotsList" class="delivery-list"></div>
+            <button id="btnSkipAllShots" class="modal-btn warn">Skip all</button>
+            <button id="btnClosePendingShots" class="modal-btn cancel">Close</button>
         </div>
     </div>
 
@@ -510,6 +548,7 @@
             <button id="tabDashboard" class="tab-btn active">Dashboard</button>
             <button id="tabLog" class="tab-btn">Log</button>
             <button id="tabScorecard" class="tab-btn">Scorecard</button>
+            <button id="tabGraphs" class="tab-btn">Graphs</button>
         </div>
         <span id="broadcastBadge" class="broadcast-badge hidden" title="The overlay feed is being published for OBS / YouTube">📺 Overlay feed on</span>
         <button id="btnGoLive" class="go-live-btn">📡 Go Live</button>
@@ -519,7 +558,7 @@
 
     <!-- SETUP SCREEN -->
     <div id="setupScreen" class="container">
-        <div class="setup-logo"><h1>🏏 Scorebook V3.1</h1></div>
+        <div class="setup-logo"><h1>🏏 Scorebook V4.2</h1></div>
         <div style="display:flex; gap:14px; margin-bottom:24px; flex-wrap:wrap;">
             <label class="toggle-row" style="flex:1; margin-bottom:0;" for="enableWagon">
                 <input type="checkbox" id="enableWagon" checked>
@@ -721,6 +760,16 @@
 
                     <button id="btnDownloadBackup" class="btn-primary" style="background:var(--surface2); color:var(--text); border:1px solid var(--border); margin-top:20px;">💾 Download JSON Backup</button>
                 </div>
+
+                <!-- GRAPHS -->
+                <div id="graphsScreen" class="hidden">
+                    <h2 style="font-family:var(--font-display); text-transform:uppercase; margin-bottom:12px;">Graphs</h2>
+                    <div class="graph-card">
+                        <div class="graph-title">Score Worm — runs by overs</div>
+                        <canvas id="wormCanvas" role="img" aria-label="Score worm: cumulative runs by overs"></canvas>
+                        <div id="wormLegend" class="worm-legend"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- WAGON WHEEL WIDGET -->
@@ -733,6 +782,10 @@
                     </div>
                     <select id="wPlayerSelect" style="display:none; width:calc(100% - 28px); margin:10px 14px; padding:8px; background:var(--surface3); border:1px solid var(--border); color:var(--text); border-radius:6px; outline:none; appearance:none;"></select>
                     <div id="wqBox" style="padding:12px 14px; background:var(--surface); color:var(--text-muted); font-family:var(--font-display); font-size:0.85em; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border);">No pending shots</div>
+                    <div id="wqActions" class="hidden" style="padding:6px 14px; gap:8px; display:flex; background:var(--surface2); border-bottom:1px solid var(--border);">
+                        <button id="btnSkipShot" class="btn-action" style="flex:1;">Skip shot</button>
+                        <button id="btnReviewShots" class="btn-action" style="flex:1;">Review</button>
+                    </div>
                     <div style="padding:8px 14px; display:flex; gap:8px; background:var(--surface2); border-bottom:1px solid var(--border);">
                         <button id="trajGround" class="btn-action" style="flex:1; background:rgba(0,229,176,0.15); color:var(--accent); border-color:rgba(0,229,176,0.3);">Ground</button>
                         <button id="trajAir" class="btn-action" style="flex:1;">In Air</button>
@@ -939,11 +992,12 @@ function consumeOrExtendFreeHit(isNoBall, isLegalDelivery) {
 }
 
 function switchTab(screenId, btnId) {
-    ['dashboardScreen', 'logScreen', 'scorecardScreen'].forEach(id => $(id).classList.add('hidden'));
-    ['tabDashboard', 'tabLog', 'tabScorecard'].forEach(id => $(id).classList.remove('active'));
+    ['dashboardScreen', 'logScreen', 'scorecardScreen', 'graphsScreen'].forEach(id => $(id).classList.add('hidden'));
+    ['tabDashboard', 'tabLog', 'tabScorecard', 'tabGraphs'].forEach(id => $(id).classList.remove('active'));
     $(screenId).classList.remove('hidden');
     $(btnId).classList.add('active');
     if (screenId === 'scorecardScreen') renderScorecard();
+    if (screenId === 'graphsScreen') renderScoreWorm();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1610,13 +1664,136 @@ function triggerAutoDownload(label) {
 // ═══════════════════════════════════════════════════════════
 //  THE QUEUE & INNINGS SYSTEM
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+//  PENDING SHOTS — visibility, skip, review, and safety valves
+//  A shot waiting to be mapped holds up the over summary / bowler
+//  prompt. That's deliberate, but it must never be able to hold the
+//  match hostage invisibly, so: it's always shown, always skippable,
+//  and never carried across an innings boundary.
+// ═══════════════════════════════════════════════════════════
+function getPendingShots(allInnings = false) {
+    return match.log.filter(l => l.wagon && l.wagon.mapStatus === 'pending' && (allInnings || (l.innings || 1) === match.innings));
+}
+
+function clearShotPending(l, extraFlags) {
+    l.wagon.mapStatus = 'unmapped';
+    l.wagon.skipped = true;
+    if (extraFlags) Object.assign(l.wagon, extraFlags);
+    delete l.wagon.x; delete l.wagon.y;
+}
+
+// True when something is actually queued up behind the mapping step
+// (an over recap, a new batter/bowler, or an innings/match end) — i.e.
+// when a pending shot is what's holding play up, not just a normal
+// mid-over shot waiting for its tap.
+function somethingWaitingOnMapping() {
+    if (match.queue.overSummaryPending || match.queue.newBatter || match.queue.newBowler) return true;
+    const maxWickets = match.maxWickets !== undefined ? match.maxWickets : 10;
+    const allOut = match.wickets >= maxWickets;
+    const oversDone = match.totalLegalBalls >= match.targetOvers * 6;
+    const chased = match.innings === 2 && match.target !== null && match.runs >= match.target;
+    return allOut || oversDone || chased;
+}
+
+function refreshPendingBanner() {
+    const banner = $('pendingShotBanner');
+    if (!banner) return;
+    const pending = match.wagonEnabled ? getPendingShots() : [];
+    const blocked = pending.length > 0 && somethingWaitingOnMapping();
+    banner.classList.toggle('hidden', !blocked);
+    if (!blocked) return;
+    $('pendingBannerText').textContent = pending.length === 1
+        ? '1 shot still to map before play can continue'
+        : `${pending.length} shots still to map before play can continue`;
+    $('btnBannerSkip').textContent = pending.length > 1 ? 'Review' : 'Skip';
+}
+
+function afterShotResolved() {
+    activeWagonBallId = null;
+    currentTraj = 'ground';
+    drawWagonCanvas(); updateWagonQueueUI(); updateWagonStats(); renderLog(); renderOverTracker();
+    triggerNextActionQueue();
+    syncToCloud();
+}
+
+function skipWagonShot(id) {
+    const target = match.log.find(l => l.id === id);
+    if (!target || !target.wagon || target.wagon.mapStatus !== 'pending') return;
+    saveState();
+    clearShotPending(target);
+    afterShotResolved();
+}
+
+function skipAllPendingShots() {
+    const all = getPendingShots(true);
+    if (!all.length) return;
+    saveState();
+    all.forEach(l => clearShotPending(l));
+    afterShotResolved();
+}
+
+// Used when an innings or the match ends with shots still unmapped, and
+// on resume for shots stranded from an earlier innings. They're closed
+// out (not silently dropped): flagged autoSkipped and noted in the edit
+// history so it's clear what happened.
+function autoSkipPendingShots(reason, allInnings = false) {
+    if (!match.wagonEnabled) return 0;
+    const pending = getPendingShots(allInnings);
+    if (!pending.length) return 0;
+    pending.forEach(l => clearShotPending(l, { autoSkipped: true }));
+    activeWagonBallId = null;
+    if (!Array.isArray(match.editHistory)) match.editHistory = [];
+    match.editHistory.push({ time: Date.now(), summary: `${pending.length} unmapped shot${pending.length === 1 ? '' : 's'} left without a location ${reason}.` });
+    return pending.length;
+}
+
+function openPendingShotsModal() {
+    const list = $('pendingShotsList');
+    const shots = getPendingShots(true);
+    if (!shots.length) {
+        $('pendingShotsModal').classList.add('hidden');
+        return;
+    }
+    list.innerHTML = shots.map(l => {
+        const current = (l.innings || 1) === match.innings;
+        const where = current ? '' : ` <span class="dr-tag">${(l.innings || 1) === 1 ? '1st' : '2nd'} innings</span>`;
+        const label = l.wagon.isWicket ? `Over ${escHtml(l.over)} — ${escHtml(l.desc || '')}` : `Over ${escHtml(l.over)} — ${escHtml(l.desc || '')}`;
+        const mapBtn = current ? `<button class="pb-btn" data-map="${l.id}">Map</button>` : '';
+        return `<div class="delivery-row"><span class="dr-desc">${label}${where}</span>${mapBtn}<button class="pb-btn" data-skip="${l.id}">Skip</button></div>`;
+    }).join('');
+    list.querySelectorAll('[data-skip]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        skipWagonShot(b.dataset.skip);
+        openPendingShotsModal();
+    }));
+    list.querySelectorAll('[data-map]').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        $('pendingShotsModal').classList.add('hidden');
+        setActiveWagonBall(b.dataset.map);
+        scrollToWagonMap();
+        showToast('Tap the field to place the shot');
+    }));
+    $('pendingShotsModal').classList.remove('hidden');
+}
+
+function scrollToWagonMap() {
+    const tab = $('tabDashboard'); if (tab) tab.click();
+    const el = $('wagonCol');
+    if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
 function triggerNextActionQueue() {
     updateControlStates();
+    refreshPendingBanner();
 
-    // Pending wagon shots get mapped first — before the over recap, and
-    // before offering the next bowler — so the shot map for the over is
-    // already complete by the time it's being reviewed/reconciled.
-    if (match.wagonEnabled && match.log.some(x => x.wagon && x.wagon.mapStatus === 'pending')) return;
+    // Pending wagon shots from THIS innings get mapped first — before the
+    // over recap, and before offering the next bowler — so the shot map
+    // for the over is already complete by the time it's being reviewed.
+    // Scoped to the current innings on purpose: this check used to look
+    // across the whole match while the on-screen queue only showed the
+    // current innings, so one orphaned shot from innings 1 could block
+    // innings 2 forever with nothing on screen to explain why.
+    if (match.wagonEnabled && getPendingShots().length) return;
 
     // Always-on checkpoint: recap the over just completed before offering
     // anything else, so it can be reconciled before moving on.
@@ -1638,14 +1815,23 @@ function triggerNextActionQueue() {
     if (match.queue.newBowler) { openSelectionModal('bowler'); return; }
 }
 
+function pendingShotNote() {
+    const n = match.wagonEnabled ? getPendingShots().length : 0;
+    return n ? ` ${n} shot${n === 1 ? ' is' : 's are'} still unmapped and will be left without a location.` : '';
+}
+
 function promptEndInnings() {
-    $('inningsModalMsg').textContent = `${match.teams[match.battingTeam].name} scored ${match.runs}/${match.wickets} in ${fmtOv(match.totalLegalBalls)} overs.`;
+    $('inningsModalMsg').textContent = `${match.teams[match.battingTeam].name} scored ${match.runs}/${match.wickets} in ${fmtOv(match.totalLegalBalls)} overs.` + pendingShotNote();
     $('inningsModal').classList.remove('hidden');
 }
 
-function promptEndMatch() { $('matchEndModal').classList.remove('hidden'); }
+function promptEndMatch() {
+    $('matchEndModalMsg').textContent = 'Target reached or innings over. Finalize the match?' + pendingShotNote();
+    $('matchEndModal').classList.remove('hidden');
+}
 
 function triggerMatchEnd() {
+    autoSkipPendingShots('when the match ended');
     const now = Date.now();
     if (match.active.strikerIdx !== null) {
         let s = match.teams[match.battingTeam].players[match.active.strikerIdx];
@@ -2157,6 +2343,11 @@ function forceEndOver() {
 function endInnings() {
     if (match.innings !== 1) return;
 
+    // Whatever's still unmapped when the innings is ended (e.g. via the
+    // manual End Inns button, which skips the normal mapping gate) is
+    // closed out here, so it can't follow the match into innings 2.
+    autoSkipPendingShots('when the innings ended');
+
     // Close out the active batters' times
     const now = Date.now();
     if (match.active.strikerIdx !== null) {
@@ -2253,6 +2444,7 @@ function updateDashboard() {
         $('bowlerName').textContent = "Bowler"; $('bowlerStats').innerHTML = `0-0 <span style="font-size:0.6em;color:var(--text-muted);">(0.0)</span>`; $('bowlerExtraStats').innerHTML = '';
     }
     renderScorecard();
+    if (!$('graphsScreen').classList.contains('hidden')) renderScoreWorm();
 }
 
 function renderOverTracker() {
@@ -2294,31 +2486,159 @@ function renderLog() {
     }).join('');
 }
 
+// ═══════════════════════════════════════════════════════════
+//  INNINGS ANALYSIS — Fall of Wickets, Partnerships, Score Worm
+//  Derived from match.log alone (no stored state), so it works on
+//  resumed matches and on JSON files from earlier versions too.
+// ═══════════════════════════════════════════════════════════
+
+// An entry's innings: its own `innings` tag, or for entries logged before
+// tagging existed, which side of the END OF INNINGS marker it sits on (the
+// same split the scorecard's Fall of Wickets has always used).
+function logInningsResolver(log) {
+    const endIdx = log.findIndex(e => e && e.type === 'summary' && typeof e.desc === 'string' && e.desc.startsWith('END OF INNINGS'));
+    return (entry, i) => (entry.innings === 1 || entry.innings === 2) ? entry.innings : (endIdx !== -1 && i > endIdx ? 2 : 1);
+}
+
+function isDeliveryEntry(l) {
+    if (!l || l.type === 'summary' || l.type === 'retirement') return false;
+    return !(typeof l.desc === 'string' && (l.desc.startsWith('END') || l.desc.startsWith('End of')));
+}
+
+function isWicketEntry(l) { return l.type !== 'retirement' && (l.isWicket === true || l.type === 'wicket'); }
+
+function extrasTypeOf(l) {
+    if (l.extras && l.extras.type) return l.extras.type;
+    const d = l.desc || ''; // older entries only have the description
+    if (/\bWide\b/.test(d)) return 'Wide';
+    if (/\bNB\b/.test(d)) return 'No Ball';
+    return null;
+}
+
+// Wides and no-balls add runs but aren't balls.
+function isLegalDelivery(l) { const t = extrasTypeOf(l); return t !== 'Wide' && t !== 'No Ball'; }
+
+// Runs an entry added — only needed for old entries that have no teamRuns.
+function entryRunsFallback(l) {
+    if (l.runsOffBat !== undefined) return (l.runsOffBat || 0) + (l.extras && l.extras.amount ? l.extras.amount : 0);
+    const d = l.desc || '';
+    if (d.includes('WICKET')) return 0;
+    const nb = d.match(/NB \+(\d+) bat(?: \+(\d+) bye)?/);
+    if (nb) return 1 + parseInt(nb[1]) + (nb[2] ? parseInt(nb[2]) : 0);
+    const m = d.match(/: ?\+?(\d+)/);
+    return m ? parseInt(m[1]) : 0;
+}
+
+function batterOfEntry(l) {
+    if (l.batter) return l.batter;
+    const d = l.desc || ''; const t = d.indexOf(' to '), c = d.indexOf(' :');
+    return t !== -1 && c > t ? d.slice(t + 4, c).trim() : '';
+}
+
+// The dismissed player — for a non-striker run out that's not the striker.
+function outPlayerOfEntry(l) {
+    if (l.wicket && l.wicket.outPlayer) return l.wicket.outPlayer;
+    const m = (l.desc || '').match(/^WICKET! (.+?) —/);
+    return m ? m[1].trim() : batterOfEntry(l);
+}
+
+function ordinal(n) { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); }
+
+// Walks one innings of the log and returns its fall of wickets, partnerships
+// and worm points. Returns null if that innings hasn't started.
+function analyseInnings(m, n) {
+    const log = Array.isArray(m.log) ? m.log : [];
+    const batKey = n === 1 ? (m.firstInnings ? m.firstInnings.team : m.battingTeam) : (m.firstInnings ? m.battingTeam : null);
+    if (!batKey || !m.teams || !m.teams[batKey]) return null;
+    const batPlayers = m.teams[batKey].players || [];
+    const matchOver = !!m.matchCompleteTriggered || log.some(l => l && l.type === 'summary' && l.desc === 'END OF MATCH');
+    const inProgress = n === 1 ? !m.firstInnings && !matchOver : !matchOver;
+    const resolve = logInningsResolver(log);
+
+    let runs = 0, balls = 0, wkts = 0;
+    const fow = [], points = [{ balls: 0, runs: 0 }], wicketPoints = [], segs = [];
+    const newSeg = () => ({ startRuns: runs, startBalls: balls, wktNo: wkts + 1, names: [], deliveries: 0, end: null });
+    let seg = newSeg();
+    const retired = new Set();
+    const note = nm => { if (nm && !seg.names.includes(nm)) seg.names.push(nm); };
+    const close = end => { seg.end = end; seg.endRuns = runs; seg.endBalls = balls; segs.push(seg); seg = newSeg(); };
+
+    log.forEach((l, i) => {
+        if (!l || resolve(l, i) !== n) return;
+        const isRet = l.type === 'retirement';
+        if (!isRet && !isDeliveryEntry(l)) return;
+        if (isRet) {
+            const who = outPlayerOfEntry(l);
+            // The same retirement logged twice in a row mustn't split off an empty partnership.
+            if (seg.deliveries === 0 && retired.has(who)) return;
+            if (typeof l.teamRuns === 'number') runs = l.teamRuns;
+            if (typeof l.teamWickets === 'number') wkts = l.teamWickets; else if (l.isWicket) wkts++;
+            retired.add(who); note(who);
+            close({ kind: 'retired', out: who, reason: (l.wicket && l.wicket.type) || 'Retired' });
+            return;
+        }
+        runs = typeof l.teamRuns === 'number' ? l.teamRuns : runs + entryRunsFallback(l);
+        if (isLegalDelivery(l)) balls++;
+        seg.deliveries++;
+        note(batterOfEntry(l));
+        points.push({ balls, runs });
+        if (isWicketEntry(l)) {
+            wkts = typeof l.teamWickets === 'number' ? l.teamWickets : wkts + 1;
+            const out = outPlayerOfEntry(l);
+            note(out);
+            fow.push({ wkt: wkts, runs, name: out, over: l.over });
+            wicketPoints.push({ balls, runs });
+            close({ kind: 'wicket', out });
+        }
+    });
+    if (inProgress || seg.deliveries > 0) { seg.endRuns = runs; seg.endBalls = balls; segs.push(seg); }
+
+    // Name each pair: whoever survived the last break, then everyone seen
+    // batting in this stretch; a partner who never faced (or the live pair)
+    // is filled from the active batters or the batting order.
+    const order = batPlayers.filter(p => p.hasBatted || p.isOut).sort((a, b) => (a.timeIn || 0) - (b.timeIn || 0)).map(p => p.name);
+    const used = new Set();
+    let survivor = null;
+    const partnerships = segs.map(s => {
+        const pair = [];
+        const add = nm => { if (nm && !pair.includes(nm) && pair.length < 2) pair.push(nm); };
+        if (!s.end && inProgress && m.active) [m.active.strikerIdx, m.active.nonStrikerIdx].forEach(ix => { if (ix != null && batPlayers[ix]) add(batPlayers[ix].name); });
+        add(survivor);
+        s.names.forEach(add);
+        while (pair.length < 2) {
+            const next = order.find(nm => !used.has(nm) && !pair.includes(nm) && !retired.has(nm));
+            if (!next) break;
+            add(next);
+        }
+        pair.forEach(nm => used.add(nm));
+        survivor = s.end ? (pair.find(nm => nm !== s.end.out) || null) : null;
+        return { wktNo: s.wktNo, batters: pair, runs: s.endRuns - s.startRuns, balls: s.endBalls - s.startBalls, unbroken: !s.end, end: s.end };
+    });
+
+    return { batKey, fow, partnerships, points, wicketPoints, runs, balls, wickets: wkts, inProgress };
+}
+
+function fowLineHtml(a) {
+    if (!a || !a.fow.length) return '';
+    const items = a.fow.map(f => `${f.wkt}-${f.runs} (${escHtml(f.name)}, ${escHtml(f.over)} ov)`).join(', ');
+    return `<div class="fow-line"><b>Fall of Wickets:</b> ${items}</div>`;
+}
+
+function partnershipsHtml(a) {
+    if (!a || !a.partnerships.length) return '';
+    const rows = a.partnerships.map(p => {
+        const names = p.batters.length ? p.batters.map(escHtml).join(' &amp; ') : '—';
+        const tag = p.unbroken ? `<span class="not-out">not out</span>`
+            : (p.end && p.end.kind === 'retired' ? `<span class="ended-note">(${escHtml(p.end.out)} ${escHtml(p.end.reason.toLowerCase())})</span>` : '');
+        return `<tr><td>${ordinal(p.wktNo)}</td><td style="font-weight:700;">${names}${tag}</td><td><b>${p.runs}${p.unbroken ? '*' : ''}</b></td><td>${p.balls}</td></tr>`;
+    }).join('');
+    return `<div class="innings-subheading">Partnerships</div><div class="table-wrapper" style="margin-bottom:0;"><table class="pship-table"><thead><tr><th>Wkt</th><th>Batters</th><th>Runs</th><th>Balls</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        + `<div class="pship-note">Partnership runs include extras scored while the pair were together.</div>`;
+}
+
 function renderScorecard() {
     $('scDateStr').textContent = match.dateString;
     $('scTossStr').textContent = match.tossStr;
-
-    const getFOWHtml = (isFirstInnings) => {
-        const endIdx = match.log.findIndex(e => e.type === 'summary' && typeof e.desc === 'string' && e.desc.startsWith('END OF INNINGS'));
-        let logSegment = isFirstInnings ? (endIdx === -1 ? match.log : match.log.slice(0, endIdx)) : (endIdx === -1 ? [] : match.log.slice(endIdx + 1));
-        let fowList = []; let calcRuns = 0; let calcWickets = 0;
-        logSegment.forEach(log => {
-            if (log.type === 'summary') return;
-            if (log.runsOffBat !== undefined) { calcRuns += log.runsOffBat; if (log.extras && log.extras.amount) calcRuns += log.extras.amount; } 
-            else if (log.desc) { const m = log.desc.match(/: \+?(\d+)/); if (m && !log.desc.includes('WICKET')) calcRuns += parseInt(m[1]); }
-            if (log.isWicket || log.type === 'wicket') {
-                calcWickets++;
-                const r = log.teamRuns !== undefined ? log.teamRuns : calcRuns;
-                const w = log.teamWickets !== undefined ? log.teamWickets : calcWickets;
-                let bName = 'Unknown';
-                if (log.wicket && log.wicket.outPlayer) bName = log.wicket.outPlayer;
-                else if (log.batter) bName = log.batter;
-                fowList.push(`${w}-${r} (${bName},${log.over} ov)`);
-            }
-        });
-        if (fowList.length === 0) return '';
-        return `<div style="font-family:var(--font-display); font-size:0.85em; color:var(--text-muted); padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-top:none; border-bottom-left-radius:var(--radius); border-bottom-right-radius:var(--radius); margin-bottom:16px; text-align:left; line-height:1.5;"><span style="font-weight:700; color:var(--text); text-transform:uppercase;">Fall of Wickets:</span> ${fowList.join(', ')}</div>`;
-    };
 
     const genTbl = (batTeamKey, bowlTeamKey, isFirstInnings) => {
         const bat = match.teams[batTeamKey]; const bowl = match.teams[bowlTeamKey];
@@ -2326,7 +2646,10 @@ function renderScorecard() {
         const dnbBatters = bat.players.filter(p => !p.hasBatted && !p.isOut);
         const activeBowlers = bowl.players.filter(p => p.bowlBalls > 0 || p.bowlRuns > 0).sort((a,b) => (a.bowlOrder||0) - (b.bowlOrder||0));
 
-        const fowHtml = getFOWHtml(isFirstInnings);
+        // A failure here must never break the scorecard (or a resume, which renders it).
+        let ana = null;
+        try { ana = analyseInnings(match, isFirstInnings ? 1 : 2); } catch (e) { console.error('Innings analysis failed:', e); }
+        const fowHtml = fowLineHtml(ana);
         const tblRadiusStyle = fowHtml ? `border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0;` : ``;
 
         let h = `<div class="innings-subheading">Batting</div><div class="table-wrapper" style="${tblRadiusStyle}"><table><thead><tr><th>Batter</th><th>Status</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>Mins</th><th>SR</th></tr></thead><tbody>`;
@@ -2338,6 +2661,7 @@ function renderScorecard() {
         });
         h += `</tbody></table></div>`;
         h += fowHtml;
+        h += partnershipsHtml(ana);
 
         h += `<div class="innings-subheading bowl">Bowling</div><div class="table-wrapper"><table><thead><tr><th>Bowler</th><th>O</th><th>M</th><th>R</th><th>W</th><th>Wd</th><th>NB</th><th>Eco</th></tr></thead><tbody>`;
         activeBowlers.forEach(p => { h += `<tr><td style="font-weight:700;">${p.name}</td><td>${fmtOv(p.bowlBalls)}</td><td>${p.bowlMaidens}</td><td>${p.bowlRuns}</td><td><b>${p.bowlWickets}</b></td><td>${p.bowlWides}</td><td>${p.bowlNoBalls}</td><td>${calcEco(p.bowlRuns,p.bowlBalls)}</td></tr>`; });
@@ -2384,6 +2708,115 @@ function applyScorecardInningsVisibility() {
     });
     $('scTabInnings1').classList.toggle('active', scorecardInningsView === 1);
     $('scTabInnings2').classList.toggle('active', scorecardInningsView === 2);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCORE WORM (Graphs tab)
+// ═══════════════════════════════════════════════════════════
+function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1e-9))));
+    const f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+
+function renderScoreWorm() {
+    const canvas = $('wormCanvas');
+    if (!canvas || !match || !match.teams) return;
+    let inn1 = null, inn2 = null;
+    try {
+        inn1 = analyseInnings(match, 1);
+        inn2 = match.firstInnings ? analyseInnings(match, 2) : null;
+    } catch (e) { console.error('Score worm analysis failed:', e); return; }
+    const series = [inn1, inn2].filter(Boolean);
+
+    const css = getComputedStyle(document.body);
+    const cv = (name, fb) => (css.getPropertyValue(name) || '').trim() || fb;
+    const col = {
+        lines: [cv('--accent2', '#0099ff'), cv('--warn', '#ffb300')],
+        wicket: cv('--danger', '#ff4455'), surface: cv('--surface', '#111820'),
+        grid: cv('--border', '#1e2e3d'), label: cv('--text-muted', '#5a7a99'), text: cv('--text', '#e8f0f8'),
+        font: cv('--font-display', 'sans-serif')
+    };
+
+    // Legend (HTML, so it uses the app's own text styles)
+    const legend = $('wormLegend');
+    if (legend) {
+        legend.innerHTML = series.map((s, i) => `<span class="lg"><span class="sw" style="background:${col.lines[i]}"></span>${escHtml(match.teams[s.batKey].name)}${i === 1 ? ' (2nd inns)' : ' (1st inns)'}</span>`).join('')
+            + (series.some(s => s.wicketPoints.length) ? `<span class="lg"><span class="dot"></span>Wicket</span>` : '')
+            + (inn2 && match.target ? `<span class="lg"><span class="dash"></span>Target ${match.target}</span>` : '');
+    }
+
+    // Size at device pixel ratio for a sharp line on high-density screens.
+    const cssW = canvas.clientWidth || (canvas.parentElement && canvas.parentElement.clientWidth) || 0;
+    if (!cssW) return;
+    const cssH = Math.max(300, Math.min(640, Math.round(cssW * 0.55)));
+    const dpr = window.devicePixelRatio || 1;
+    canvas.style.height = cssH + 'px';
+    canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+    const ctx = canvas.getContext && canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const fs = cssW >= 900 ? 16 : 14;
+    const pad = { l: fs * 3.4, r: fs * 3.6, t: fs * 1.2, b: fs * 3 };
+    const plotW = cssW - pad.l - pad.r, plotH = cssH - pad.t - pad.b;
+
+    const maxBalls = Math.max((match.targetOvers || 0) * 6, ...series.map(s => s.balls), 6);
+    const maxOvers = Math.ceil(maxBalls / 6);
+    const topRuns = Math.max(10, ...series.map(s => s.runs), inn2 && match.target ? match.target : 0);
+    const yStep = niceStep(topRuns / 6);
+    const yMax = Math.ceil((topRuns * 1.05) / yStep) * yStep;
+    const xStep = [1, 2, 5, 10, 20, 50].find(s => maxOvers / s <= (cssW >= 900 ? 12 : 8)) || 50;
+    const X = b => pad.l + (b / 6) / maxOvers * plotW;
+    const Y = r => pad.t + plotH - (r / yMax) * plotH;
+
+    // Grid and axes
+    ctx.font = `600 ${fs}px ${col.font}`;
+    ctx.lineWidth = 1; ctx.strokeStyle = col.grid; ctx.fillStyle = col.label;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let r = 0; r <= yMax; r += yStep) {
+        ctx.beginPath(); ctx.moveTo(pad.l, Y(r)); ctx.lineTo(pad.l + plotW, Y(r)); ctx.stroke();
+        ctx.fillText(String(r), pad.l - 8, Y(r));
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    for (let o = 0; o <= maxOvers; o += xStep) {
+        ctx.beginPath(); ctx.moveTo(X(o * 6), pad.t); ctx.lineTo(X(o * 6), pad.t + plotH); ctx.stroke();
+        ctx.fillText(String(o), X(o * 6), pad.t + plotH + 6);
+    }
+    ctx.fillText('Overs', pad.l + plotW / 2, pad.t + plotH + fs + 12);
+    ctx.save(); ctx.translate(fs * 0.9, pad.t + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'middle'; ctx.fillText('Runs', 0, 0); ctx.restore();
+
+    // Target (2nd innings)
+    if (inn2 && match.target) {
+        ctx.save(); ctx.setLineDash([8, 6]); ctx.lineWidth = 2; ctx.strokeStyle = col.label;
+        ctx.beginPath(); ctx.moveTo(pad.l, Y(match.target)); ctx.lineTo(pad.l + plotW, Y(match.target)); ctx.stroke(); ctx.restore();
+        ctx.fillStyle = col.label; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText(`Target ${match.target}`, pad.l + 6, Y(match.target) - 4);
+    }
+
+    if (!series.some(s => s.balls > 0 || s.runs > 0)) {
+        ctx.fillStyle = col.label; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `600 ${fs + 2}px ${col.font}`;
+        ctx.fillText('No balls bowled yet', pad.l + plotW / 2, pad.t + plotH / 2);
+        return;
+    }
+
+    // Worm lines, wicket dots and the current score at each line's end
+    series.forEach((s, i) => {
+        ctx.strokeStyle = col.lines[i]; ctx.lineWidth = 3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.beginPath();
+        s.points.forEach((p, k) => { if (k === 0) ctx.moveTo(X(p.balls), Y(p.runs)); else ctx.lineTo(X(p.balls), Y(p.runs)); });
+        ctx.stroke();
+        s.wicketPoints.forEach(p => {
+            ctx.beginPath(); ctx.arc(X(p.balls), Y(p.runs), fs * 0.36, 0, Math.PI * 2);
+            ctx.fillStyle = col.wicket; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = col.surface; ctx.stroke();
+        });
+        const last = s.points[s.points.length - 1];
+        ctx.fillStyle = col.lines[i]; ctx.font = `800 ${fs}px ${col.font}`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(`${s.runs}/${s.wickets}`,Math.min(X(last.balls) + 8, cssW - pad.r + 6), Y(last.runs) - (i === 1 ? fs * 0.9 : 0));
+    });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2536,7 +2969,8 @@ function setActiveWagonBall(id) {
 function updateWagonQueueUI() {
     const box = $('wqBox');
     if (!box) return;
-    const pending = match.log.filter(l => l.wagon && l.wagon.mapStatus === 'pending' && (l.innings || 1) === match.innings);
+    const pending = getPendingShots();
+    const actions = $('wqActions');
 
     if (!activeWagonBallId && pending.length) {
         activeWagonBallId = pending[0].id;
@@ -2549,6 +2983,8 @@ function updateWagonQueueUI() {
     if (!activeWagonBallId) {
         box.textContent = 'No pending shots';
         $('trajGround').style.opacity = 0.4; $('trajAir').style.opacity = 0.4;
+        if (actions) actions.classList.add('hidden');
+        refreshPendingBanner();
         return;
     }
 
@@ -2556,6 +2992,11 @@ function updateWagonQueueUI() {
     const w = active.wagon;
     const label = w.isWicket ? `WICKET (${w.wicketType})` : `${w.runs} run${w.runs === 1 ? '' : 's'}`;
     box.textContent = `Tap the field to place: ${label} — ${pending.length} pending`;
+    if (actions) {
+        actions.classList.remove('hidden');
+        $('btnReviewShots').textContent = pending.length > 1 ? `Review all (${pending.length})` : 'Review';
+    }
+    refreshPendingBanner();
 
     const locked = !!w.lockedTraj;
     $('trajGround').style.opacity = locked ? 0.4 : 1;
@@ -2640,6 +3081,21 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (typeof match.freeHit !== 'boolean') match.freeHit = false;
                 if (typeof match.enableFreeHit !== 'boolean') match.enableFreeHit = true;
                 if (match.maxWickets === undefined) match.maxWickets = 10;
+                // Shots left pending from an EARLIER innings can't be placed from
+                // here (the map only shows the current innings) — close them out
+                // so they can't block play. Only touches entries explicitly tagged
+                // with a different innings, never untagged legacy ones.
+                match.log.forEach(l => {
+                    if (l.wagon && l.wagon.mapStatus === 'pending' && l.innings !== undefined && l.innings !== match.innings) {
+                        clearShotPending(l, { autoSkipped: true });
+                        if (!match._strandedClosed) match._strandedClosed = 0;
+                        match._strandedClosed++;
+                    }
+                });
+                if (match._strandedClosed) {
+                    match.editHistory.push({ time: Date.now(), summary: `${match._strandedClosed} shot${match._strandedClosed === 1 ? '' : 's'} stranded from an earlier innings were closed out on resume.` });
+                    delete match._strandedClosed;
+                }
                 if (typeof match.broadcastEnabled !== 'boolean') match.broadcastEnabled = false;
                 scorecardInningsView = match.innings === 2 ? 2 : 1;
                 
@@ -2655,6 +3111,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 updateGoLiveButton();
                 publishBroadcast();
                 if (match.active.strikerIdx === null) openSelectionModal('striker'); else if (match.active.nonStrikerIdx === null) openSelectionModal('nonStriker'); else if (match.active.bowlerIdx === null) openSelectionModal('bowler');
+                else triggerNextActionQueue(); // surface any recap / new-batter / new-bowler prompt that was waiting when the match was saved
                 showToast('Match resumed — undo history starts fresh');
             } catch (e) { localStorage.removeItem('live_match_backup'); }
         }, () => { localStorage.removeItem('live_match_backup'); try { localStorage.removeItem(BROADCAST_KEY); } catch (e) {} });
@@ -2664,8 +3121,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function wireUpEvents() {
-    $('tabDashboard').addEventListener('click', () => switchTab('dashboardScreen','tabDashboard')); $('tabLog').addEventListener('click', () => switchTab('logScreen','tabLog'));$('tabScorecard').addEventListener('click', () => switchTab('scorecardScreen','tabScorecard'));
-    $('themeToggle').addEventListener('click', () => { document.body.classList.toggle('light-mode'); appTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';$('themeToggle').textContent = appTheme === 'light' ? '🌙' : '☀️'; if (wCtx) drawWagonCanvas(); localStorage.setItem('live_match_theme', appTheme); });
+    $('tabDashboard').addEventListener('click', () => switchTab('dashboardScreen','tabDashboard')); $('tabLog').addEventListener('click', () => switchTab('logScreen','tabLog'));$('tabScorecard').addEventListener('click', () => switchTab('scorecardScreen','tabScorecard')); $('tabGraphs').addEventListener('click', () => switchTab('graphsScreen','tabGraphs'));
+    window.addEventListener('resize', () => { if (!$('graphsScreen').classList.contains('hidden')) renderScoreWorm(); });
+    $('themeToggle').addEventListener('click', () => { document.body.classList.toggle('light-mode'); appTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';$('themeToggle').textContent = appTheme === 'light' ? '🌙' : '☀️'; if (wCtx) drawWagonCanvas(); if (!$('graphsScreen').classList.contains('hidden')) renderScoreWorm(); localStorage.setItem('live_match_theme', appTheme); });
     $('btnStartMatch').addEventListener('click', startMatch);
     $('teamAName').addEventListener('input', () => updateTeamHeader('A'));$('teamBName').addEventListener('input', () => updateTeamHeader('B'));
     $('oversDown').addEventListener('click', () => adjustStepper('inputOvers', -1));$('oversUp').addEventListener('click', () => adjustStepper('inputOvers', 1));
@@ -2694,6 +3152,16 @@ function wireUpEvents() {
     $('btnCloseLiveModal').addEventListener('click', () => $('goLiveModal').classList.add('hidden'));
 
     // Corrections entry point + menu
+    $('btnSkipShot').addEventListener('click', () => { if (activeWagonBallId) skipWagonShot(activeWagonBallId); });
+    $('btnReviewShots').addEventListener('click', openPendingShotsModal);
+    $('btnBannerMap').addEventListener('click', scrollToWagonMap);
+    $('btnBannerSkip').addEventListener('click', () => {
+        const pending = getPendingShots();
+        if (pending.length > 1) openPendingShotsModal();
+        else if (pending.length === 1) skipWagonShot(pending[0].id);
+    });
+    $('btnSkipAllShots').addEventListener('click', () => { skipAllPendingShots(); $('pendingShotsModal').classList.add('hidden'); });
+    $('btnClosePendingShots').addEventListener('click', () => $('pendingShotsModal').classList.add('hidden'));
     $('btnOpenCorrections').addEventListener('click', openCorrectionsScreen);
     $('btnCloseCorrections').addEventListener('click', () => $('correctionsModal').classList.add('hidden'));
     $('optRename').addEventListener('click', openRenameCorrectionTool);
